@@ -1,0 +1,504 @@
+A,Healthcare
+AAL,Industrials
+AAP,Consumer Cyclical
+AAPL,Technology
+ABBV,Healthcare
+ABC,No Information
+ABMD,Healthcare
+ABT,Healthcare
+ACN,No Information
+ADBE,Technology
+ADI,Technology
+ADM,Consumer Defensive
+ADP,Industrials
+ADSK,Technology
+AEE,Utilities
+AEP,Utilities
+AES,Utilities
+AFL,Financial Services
+AIG,No Information
+AIV,No Information
+AIZ,Financial Services
+AJG,Financial Services
+AKAM,Technology
+ALB,Basic Materials
+ALGN,No Information
+ALK,Industrials
+ALL,Financial Services
+ALLE,Industrials
+ALXN,Healthcare
+AMAT,Technology
+AMCR,Consumer Cyclical
+AMD,Technology
+AME,Industrials
+AMGN,Healthcare
+AMP,Financial Services
+AMT,Real Estate
+AMZN,Consumer Cyclical
+ANET,Technology
+ANSS,Technology
+ANTM,No Information
+AON,Financial Services
+AOS,Industrials
+APA,Energy
+APD,Basic Materials
+APH,No Information
+APTV,No Information
+ARE,Real Estate
+ATO,Utilities
+ATVI,Communication Services
+AVB,No Information
+AVGO,Technology
+AVY,Industrials
+AWK,Utilities
+AXP,Financial Services
+AZO,Consumer Cyclical
+BA,Industrials
+BAC,Financial Services
+BAX,Healthcare
+BBY,Consumer Cyclical
+BDX,Healthcare
+BEN,Financial Services
+BF.B,No Information
+BIIB,Healthcare
+BIO,Healthcare
+BK,No Information
+BKNG,Consumer Cyclical
+BKR,Energy
+BLK,Financial Services
+BLL,Consumer Cyclical
+BMY,No Information
+BR,Technology
+BRK.B,No Information
+BSX,Healthcare
+BWA,Consumer Cyclical
+BXP,Real Estate
+C,No Information
+CAG,Consumer Defensive
+CAH,No Information
+CARR,Industrials
+CAT,Industrials
+CB,No Information
+CBOE,Financial Services
+CBRE,No Information
+CCI,Real Estate
+CCL,No Information
+CDNS,Technology
+CDW,No Information
+CE,Basic Materials
+CERN,Healthcare
+CF,Basic Materials
+CFG,Financial Services
+CHD,Consumer Defensive
+CHRW,No Information
+CHTR,Communication Services
+CI,Healthcare
+CINF,Financial Services
+CL,Consumer Defensive
+CLX,Consumer Defensive
+CMA,No Information
+CMCSA,No Information
+CME,Financial Services
+CMG,Consumer Cyclical
+CMI,Industrials
+CMS,Utilities
+CNC,No Information
+CNP,Utilities
+COF,Financial Services
+COG,Energy
+COO,No Information
+COP,Energy
+COST,Consumer Defensive
+COTY,Consumer Defensive
+CPB,Consumer Defensive
+CPRT,Industrials
+CRM,No Information
+CSCO,No Information
+CSX,Industrials
+CTAS,Industrials
+CTL,No Information
+CTSH,Technology
+CTVA,Basic Materials
+CTXS,Technology
+CVS,No Information
+CVX,No Information
+CXO,Energy
+D,Utilities
+DAL,Industrials
+DD,No Information
+DE,Industrials
+DFS,Financial Services
+DG,No Information
+DGX,No Information
+DHI,Consumer Cyclical
+DHR,No Information
+DIS,Communication Services
+DISCA,Communication Services
+DISCK,Communication Services
+DISH,Communication Services
+DLR,No Information
+DLTR,Consumer Defensive
+DOV,Industrials
+DOW,Basic Materials
+DPZ,Consumer Cyclical
+DRE,No Information
+DRI,Consumer Cyclical
+DTE,Utilities
+DUK,No Information
+DVA,Healthcare
+DVN,No Information
+DXC,Technology
+DXCM,Healthcare
+EA,Communication Services
+EBAY,Consumer Cyclical
+ECL,Basic Materials
+ED,Utilities
+EFX,Industrials
+EIX,Utilities
+EL,Consumer Defensive
+EMN,Basic Materials
+EMR,Industrials
+EOG,Energy
+EQIX,No Information
+EQR,Real Estate
+ES,Utilities
+ESS,Real Estate
+ETFC,No Information
+ETN,No Information
+ETR,No Information
+EVRG,No Information
+EW,Healthcare
+EXC,Utilities
+EXPD,No Information
+EXPE,No Information
+EXR,Real Estate
+F,No Information
+FANG,Energy
+FAST,Industrials
+FB,Communication Services
+FBHS,Consumer Cyclical
+FCX,No Information
+FDX,No Information
+FE,No Information
+FFIV,Technology
+FIS,Technology
+FISV,Technology
+FITB,Financial Services
+FLIR,Technology
+FLS,No Information
+FLT,Technology
+FMC,No Information
+FOX,Communication Services
+FOXA,Communication Services
+FRC,Financial Services
+FRT,Real Estate
+FTI,Energy
+FTNT,Technology
+FTV,Technology
+GD,No Information
+GE,Industrials
+GILD,Healthcare
+GIS,Consumer Defensive
+GL,Financial Services
+GLW,Technology
+GM,Consumer Cyclical
+GOOG,Communication Services
+GPC,Consumer Cyclical
+GPN,Industrials
+GPS,No Information
+GRMN,No Information
+GS,Financial Services
+GWW,Industrials
+HAL,Energy
+HAS,Consumer Cyclical
+HBAN,Financial Services
+HBI,Consumer Cyclical
+HCA,Healthcare
+HD,No Information
+HES,No Information
+HFC,No Information
+HIG,Financial Services
+HII,No Information
+HLT,No Information
+HOLX,Healthcare
+HON,No Information
+HPE,Technology
+HPQ,Technology
+HRB,Consumer Cyclical
+HRL,Consumer Defensive
+HSIC,Healthcare
+HST,No Information
+HSY,Consumer Defensive
+HUM,Healthcare
+HWM,No Information
+IBM,Technology
+ICE,Financial Services
+IDXX,Healthcare
+IEX,Industrials
+IFF,Basic Materials
+ILMN,Healthcare
+INCY,Healthcare
+INFO,Industrials
+INTC,Technology
+INTU,Technology
+IP,Consumer Cyclical
+IPG,Communication Services
+IPGP,Technology
+IQV,Healthcare
+IR,No Information
+IRM,Real Estate
+ISRG,No Information
+IT,No Information
+ITW,Industrials
+IVZ,Financial Services
+J,Industrials
+JBHT,Industrials
+JCI,Industrials
+JKHY,No Information
+JNJ,Healthcare
+JNPR,Technology
+JPM,No Information
+K,Consumer Defensive
+KEY,Financial Services
+KEYS,No Information
+KHC,Consumer Defensive
+KIM,Real Estate
+KLAC,Technology
+KMB,Consumer Defensive
+KMI,Energy
+KMX,Consumer Cyclical
+KO,Consumer Defensive
+KR,No Information
+KSS,Consumer Cyclical
+KSU,No Information
+L,Financial Services
+LB,Consumer Cyclical
+LDOS,Technology
+LEG,Consumer Cyclical
+LEN,Consumer Cyclical
+LH,No Information
+LHX,No Information
+LIN,Basic Materials
+LKQ,No Information
+LLY,Healthcare
+LMT,Industrials
+LNC,Financial Services
+LNT,Utilities
+LOW,Consumer Cyclical
+LRCX,Technology
+LUV,Industrials
+LVS,Consumer Cyclical
+LW,Consumer Defensive
+LYB,Basic Materials
+LYV,No Information
+MA,Financial Services
+MAA,No Information
+MAR,Consumer Cyclical
+MAS,Industrials
+MCD,Consumer Cyclical
+MCHP,Technology
+MCK,No Information
+MCO,No Information
+MDLZ,No Information
+MDT,Healthcare
+MET,Financial Services
+MGM,Consumer Cyclical
+MHK,Consumer Cyclical
+MKC,Consumer Defensive
+MKTX,Financial Services
+MLM,Basic Materials
+MMC,No Information
+MMM,No Information
+MNST,No Information
+MO,Consumer Defensive
+MOS,Basic Materials
+MPC,Energy
+MRK,No Information
+MRO,Energy
+MS,No Information
+MSCI,Financial Services
+MSFT,Technology
+MSI,No Information
+MTB,No Information
+MTD,Healthcare
+MU,Technology
+MXIM,Technology
+MYL,Healthcare
+NBL,No Information
+NCLH,Consumer Cyclical
+NDAQ,Financial Services
+NEE,No Information
+NEM,Basic Materials
+NFLX,No Information
+NI,No Information
+NKE,Consumer Cyclical
+NLOK,Technology
+NLSN,Industrials
+NOC,No Information
+NOV,Energy
+NOW,Technology
+NRG,Utilities
+NSC,Industrials
+NTAP,Technology
+NTRS,Financial Services
+NUE,Basic Materials
+NVDA,Technology
+NVR,No Information
+NWL,No Information
+NWS,Communication Services
+NWSA,Communication Services
+O,Real Estate
+ODFL,Industrials
+OKE,No Information
+OMC,No Information
+ORCL,Technology
+ORLY,Consumer Cyclical
+OTIS,Industrials
+OXY,Energy
+PAYC,No Information
+PAYX,Industrials
+PBCT,Financial Services
+PCAR,Industrials
+PEAK,No Information
+PEG,No Information
+PEP,Consumer Defensive
+PFE,Healthcare
+PFG,Financial Services
+PG,No Information
+PGR,Financial Services
+PH,Industrials
+PHM,No Information
+PKG,Consumer Cyclical
+PKI,No Information
+PLD,Real Estate
+PM,Consumer Defensive
+PNC,Financial Services
+PNR,No Information
+PNW,No Information
+PPG,No Information
+PPL,No Information
+PRGO,Healthcare
+PRU,Financial Services
+PSA,Real Estate
+PSX,Energy
+PVH,Consumer Cyclical
+PWR,Industrials
+PXD,No Information
+PYPL,Financial Services
+QCOM,Technology
+QRVO,Technology
+RCL,Consumer Cyclical
+RE,No Information
+REG,Real Estate
+REGN,Healthcare
+RF,Financial Services
+RHI,No Information
+RJF,No Information
+RL,No Information
+RMD,Healthcare
+ROK,Industrials
+ROL,Consumer Cyclical
+ROP,Industrials
+ROST,Consumer Cyclical
+RSG,No Information
+RTX,No Information
+SBAC,No Information
+SBUX,Consumer Cyclical
+SCHW,Financial Services
+SEE,No Information
+SHW,Basic Materials
+SIVB,No Information
+SJM,No Information
+SLB,Energy
+SLG,Real Estate
+SNA,Industrials
+SNPS,Technology
+SO,Utilities
+SPG,No Information
+SPGI,No Information
+SRE,Utilities
+STE,No Information
+STT,No Information
+STX,No Information
+STZ,No Information
+SWK,Industrials
+SWKS,Technology
+SYF,No Information
+SYK,Healthcare
+SYY,Consumer Defensive
+T,Communication Services
+TAP,No Information
+TDG,No Information
+TDY,No Information
+TEL,No Information
+TFC,No Information
+TFX,Healthcare
+TGT,No Information
+TIF,Consumer Cyclical
+TJX,Consumer Cyclical
+TMO,Healthcare
+TMUS,Communication Services
+TPR,No Information
+TROW,Financial Services
+TRV,No Information
+TSCO,Consumer Cyclical
+TSN,Consumer Defensive
+TT,No Information
+TTWO,Communication Services
+TWTR,Communication Services
+TXN,Technology
+TXT,No Information
+TYL,No Information
+UA,Consumer Cyclical
+UAA,Consumer Cyclical
+UAL,No Information
+UDR,No Information
+UHS,Healthcare
+ULTA,Consumer Cyclical
+UNH,No Information
+UNM,Financial Services
+UNP,Industrials
+UPS,Industrials
+URI,Industrials
+USB,No Information
+V,Financial Services
+VAR,No Information
+VFC,Consumer Cyclical
+VIAC,No Information
+VLO,No Information
+VMC,Basic Materials
+VNO,No Information
+VRSK,Industrials
+VRSN,Technology
+VRTX,Healthcare
+VTR,No Information
+VZ,No Information
+WAB,Industrials
+WAT,Healthcare
+WBA,Healthcare
+WDC,Technology
+WEC,No Information
+WELL,No Information
+WFC,No Information
+WHR,Consumer Cyclical
+WLTW,No Information
+WM,No Information
+WMB,No Information
+WMT,Consumer Defensive
+WRB,No Information
+WRK,Consumer Cyclical
+WST,No Information
+WU,No Information
+WY,Real Estate
+WYNN,No Information
+XEL,No Information
+XLNX,Technology
+XOM,No Information
+XRAY,No Information
+XRX,No Information
+XYL,Industrials
+YUM,No Information
+ZBH,Healthcare
+ZBRA,Technology
+ZION,Financial Services
+ZTS,Healthcare
