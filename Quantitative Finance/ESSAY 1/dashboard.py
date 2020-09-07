@@ -15,6 +15,14 @@ from plotly.subplots import make_subplots
 import numpy as np
 import re
 
+def bbands(price, window_size=10, num_of_std=5):
+    rolling_mean = price.rolling(window=window_size).mean()
+    rolling_std  = price.rolling(window=window_size).std()
+    upper_band = rolling_mean + (rolling_std*num_of_std)
+    lower_band = rolling_mean - (rolling_std*num_of_std)
+    return rolling_mean, upper_band, lower_band
+
+
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
@@ -46,31 +54,9 @@ for sector, value in clean_sp500.items():
         if sector == row[1]:
             clean_sp500[row[1]] += [row[0], row[2]]
 
-
-# stocks = ['AAP', 'AMZN']
-
-# dfs = {}
-# for stock in stocks:
-#     dfs[stock] = yf.Ticker(stock).history(period="2y")
-
-# for df in dfs:
-#     dfs[df]['Returns'] = (dfs[df].Open - dfs[df].Open.shift(1)) / dfs[df].Open.shift(1)
-#     dfs[df] = dfs[df].iloc[1:, [0,1,2,3,7]]
-#     dfs[df].reset_index(inplace=True)
-#     dfs[df]["Color"] = np.where(dfs[df]['Returns'] < 0, 'red', 'green')
-
-# stats = pd.DataFrame(
-#     {
-#         'Stock': [df for df in dfs],
-#         'Std': [dfs[df].Returns.std() for df in dfs],
-#         'Mean': [dfs[df].Returns.mean() for df in dfs],
-#         'Min': [dfs[df].Returns.min() for df in dfs],
-#         'Max': [dfs[df].Returns.max() for df in dfs],
-#         'Kurtosis': [dfs[df].Returns.kurtosis() for df in dfs],
-#         'Skewness': [dfs[df].Returns.skew() for df in dfs],
-#     },
-#     index=[df for df in dfs]
-# )
+global covid
+covid = pd.read_csv('covid_USA.csv')
+covid.Date = pd.to_datetime(covid.Date)
 
 stats = pd.DataFrame(
     {
@@ -88,214 +74,78 @@ stats = pd.DataFrame(
 # First Chart
 first = go.Figure()
 
-# for df in dfs:
-#     first.add_trace(
-#         go.Scatter(
-#             x = dfs[df].Date,
-#             y = dfs[df].Close,
-#             name = df
-#         )
-#     )
-
-# first.update_layout(
-#     width=1200,
-#     height=600,
-#     xaxis = dict(
-#         rangeslider = {'visible': True},
-#     ),
-#     title=f'{stock} Analysis during the COVID',
-#     yaxis_title='Stocks',
-#     shapes = [dict(
-#         x0='2020-02-15', x1='2020-02-15', y0=0, y1=1, xref='x', yref='paper',
-#         line_width=2)],
-#     annotations=[dict(
-#         x='2020-02-17', y=0.95, xref='x', yref='paper',
-#         showarrow=False, xanchor='left', text='COVID Begins')],
-#     yaxis=dict(
-#     ticksuffix=' $'
-#     ),
-# )
-
 
 # Second Analysis
 second = go.Figure()
-# second = go.Figure(data=[go.Candlestick(x=df.Date,
-#                 open=df.Open,
-#                 high=df.High,
-#                 low=df.Low,
-#                 close=df.Close)])
-
-# second.update_layout(
-#     width=1200,
-#     height=800,
-#     title='Amazon Analysis during the COVID',
-#     yaxis_title='Stocks',
-#     shapes = [dict(
-#         x0='2020-02-15', x1='2020-02-15', y0=0, y1=1, xref='x', yref='paper',
-#         line_width=2)],
-#     annotations=[dict(
-#         x='2020-02-17', y=0.95, xref='x', yref='paper',
-#         showarrow=False, xanchor='left', text='COVID Begins')],
-#     yaxis=dict(
-#     ticksuffix=' $'
-#     ),
-#     xaxis = dict(
-#         rangeslider = {'visible': False},
-#     ),
-# )
 
 
 # Third Analysis
 third = go.Figure()
-# # Create figure with secondary y-axis
-# third = make_subplots(specs=[[{"secondary_y": True}]])
 
-# # Add traces
-# third.add_trace(
-#     go.Scatter(x=df.Date, y=df.Close, name="Closing Prices", yaxis="y"),
-#     secondary_y=False
-# )
 
-# third.add_trace(
-#     go.Bar(x=df.Date, y=(df.Returns * 100), name="Returns", marker_color=df.Color, yaxis="y1"),
-#     secondary_y=True
-# )
+app.layout = html.Div([
+        html.Div([
+            html.H1('The S&P500 during the COVID crisis'),
+            html.Div('The COVID crisis begins around the February 02 2020 in the world (economicly)'),
+        ]),
+        html.Div([
+            dcc.Dropdown(
+                id='sectors-drop',
+                options=[{'label': k, 'value': k} for k in clean_sp500.keys()],
+                value='Consumer Cyclical'
+            ),
+        ]),
 
-# # Set x-axis title
-# third.update_xaxes(title_text="Date")
+        html.Hr(),
 
-# third.update_layout(
-#     width=1200,
-#     height=600,
-#     title='Amazon Analysis during the COVID',
-#     yaxis_title='Stocks',
-#     shapes = [dict(
-#         x0='2020-02-15', x1='2020-02-15', y0=0, y1=1, xref='x', yref='paper',
-#         line_width=2)],
-#     annotations=[dict(
-#         x='2020-02-17', y=0.95, xref='x', yref='paper',
-#         showarrow=False, xanchor='left', text='COVID Begins')]
-# )
+        html.Div([
+            dcc.Dropdown(id='stock-drop', value='AAP', clearable=False),
+        ]),
 
-# third.update_layout(
-#     yaxis=dict(
-#     title="Amazon's Closing Prices",
-#     ticksuffix=' $'
+        html.Hr(),
 
-#     ),
-#     yaxis2=dict(
-#         title="Amazon's Returns",
-#         ticksuffix = '%'
-#     )
-# )
+        html.Div([
+            html.Button(id='add-stock', n_clicks=0, children='Add Stock'),
+        ], style={'display': 'inline-block', 'width': '10%'}),
 
-# stocks = go.Figure()
+        html.Div([
+            html.Button(id='remove-stock', n_clicks=0, children='Remove Stock'),
+        ], style={'display': 'inline-block'}),
 
-# for df in dfs:
-#     stocks.add_trace(
-#         go.Scatter(
-#             x = dfs[df].Date,
-#             y = dfs[df].Close,
-#             name = df
-#         )
-#     )
+        html.Div(id='output-stocks'),
 
-# stocks.update_layout(
-#     updatemenus=[go.layout.Updatemenu(
-#         active=0,
-#         buttons=list(
-#             [dict(label = 'All',
-#                   method = 'update',
-#                   args = [{'visible': [True, True, True]},
-#                           {'title': 'The COVID in USA',
-#                            'showlegend':True}]),
-#              dict(label = 'AMZN',
-#                   method = 'update',
-#                   args = [{'visible': [True, False, False]},
-#                           {'title': 'Amazon Stock during the COVID',
-#                            'showlegend':True}]),
-#              dict(label = 'GOOG',
-#                   method = 'update',
-#                   args = [{'visible': [False, True, False]},
-#                           {'title': 'Google Stock during the COVID',
-#                            'showlegend':True}]),
-#              dict(label = 'TSLA',
-#                   method = 'update',
-#                   args = [{'visible': [False, False, True]},
-#                           {'title': 'Tesla Stock during the COVID',
-#                            'showlegend':True}]),
-#             ])
-#         )
-#     ])
+        html.Hr(),
 
-# stocks.update_layout(
-#     width=1200,
-#     height=600,
-#     title='The COVID in USA (S&P500)',
-#     yaxis_title='Stocks',
-#     shapes = [dict(
-#         x0='2020-02-15', x1='2020-02-15', y0=0, y1=1, xref='x', yref='paper',
-#         line_width=2)],
-#     annotations=[dict(
-#         x='2020-02-17', y=0.95, xref='x', yref='paper',
-#         showarrow=False, xanchor='left', text='COVID Begins')],
-#     yaxis=dict(
-#     ticksuffix=' $'
-#     ),
-# )
+        html.Div([
+            dash_table.DataTable(
+                id='table',
+                columns=[{"name": i, "id": i} for i in stats.columns],
+                data=stats.to_dict('records'),
+            ),
+        ]),
 
-app.layout = html.Div(children=[
-    html.H1(children='The S&P500 during the COVID crisis'),
+        html.Div([
+            html.Div([
+                dcc.Graph(
+                    id='first-graph',
+                    figure=first
+                ),
+            ]),
+        ]),
 
-    html.Div(children='''
-        The COVID crisis begins around the February 02 2020 in the world (economicly)
-    '''),
+        html.Div([
+            dcc.Graph(
+                id='second-graph',
+                figure=second
+            ),
+        ]),
 
-    dcc.Dropdown(
-        id='sectors-drop',
-        options=[{'label': k, 'value': k} for k in clean_sp500.keys()],
-        value='Consumer Cyclical'
-    ),
-
-    html.Hr(),
-
-    dcc.Dropdown(id='stock-drop', value='AAP', clearable=False),
-
-    html.Hr(),
-
-    html.Button(id='add-stock', n_clicks=0, children='Add Stock'),
-
-    html.Button(id='remove-stock', n_clicks=0, children='Remove Stock'),
-
-    html.Div(id='output-stocks'),
-
-    html.Hr(),
-
-    dash_table.DataTable(
-        id='table',
-        columns=[{"name": i, "id": i} for i in stats.columns],
-        data=stats.to_dict('records'),
-    ),
-
-    dcc.Graph(
-        id='first-graph',
-        figure=first
-    ),
-
-    dcc.Graph(
-        id='second-graph',
-        figure=second
-    ),
-
-    dcc.Graph(
-        id='third-graph',
-        figure=third
-    ),
-
-    # dcc.Graph(
-    #     id='stocks-graph',
-    #     figure=stocks
-    # )
+        html.Div([
+            dcc.Graph(
+                id='third-graph',
+                figure=third
+            ),
+        ]),
 ])
 
 @app.callback(
@@ -340,7 +190,7 @@ def update_output_div(stock, opt):
 
     df = yf.Ticker(stock).history(period="2y")
     df['Returns'] = (df.Open - df.Open.shift(1)) / df.Open.shift(1)
-    df = df.iloc[1:, [0,1,2,3,7]]
+    df = df.iloc[1:]
     df.reset_index(inplace=True)
     df["Color"] = np.where(df['Returns'] < 0, 'red', 'green')
 
@@ -358,17 +208,36 @@ def update_output_div(stock, opt):
     )
 
     # First Chart
-    fig = go.Figure()
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
     fig.add_trace(
         go.Scatter(
             x = df.Date,
             y = df.Close,
-            name = stock
-        )
+            name = stock,
+            yaxis='y'),
+        secondary_y=False
     )
 
+    fig.add_trace(go.Scatter(x= covid.Date, y=covid.Case, name='COVID', yaxis='y1'), secondary_y=True)
+
     fig.update_layout(
-        width=1200,
+        updatemenus=[dict(
+            active=0,
+            type='buttons',
+            direction='down',
+            buttons=list(
+                [dict(label = 'Show COVID',
+                    method = 'update',
+                    args = [{'visible': [True, True]}]),
+                dict(label = 'Hide COVID',
+                    method = 'update',
+                    args = [{'visible': [True, False]}]),
+                ])
+            )
+        ])
+
+    fig.update_layout(
+        width=1400,
         height=600,
         xaxis = dict(
             rangeslider = {'visible': True},
@@ -387,14 +256,60 @@ def update_output_div(stock, opt):
     )
 
     # Second Chart
-    fig2 = go.Figure(data=[go.Candlestick(x=df.Date,
+    row_width = [1]
+    row_width.extend([0.25] * (2 - 1))
+
+    fig2 = make_subplots(
+        rows=2,
+        cols=1,
+        shared_xaxes=True,
+        vertical_spacing=0,
+        row_width=row_width[::-1],
+    )
+
+    bb_avg, bb_upper, bb_lower = bbands(df.Close)
+
+    fig2.add_trace(go.Scatter(x=df.Date, y=bb_upper, yaxis='y2',
+                            line = dict(width = 1),
+                            line_color='#ccc', hoverinfo='none',
+                            legendgroup='Bollinger Bands', name='Bollinger Bands',
+                            mode='lines'),
+                            row=1, col=1)
+
+    fig2.add_trace(go.Scatter(x=df.Date, y=bb_lower, yaxis='y2',
+                            line = dict(width = 1),
+                            line_color='#ccc', hoverinfo='none',
+                            legendgroup='Bollinger Bands', showlegend=False,
+                            mode='lines', fill='tonexty'),
+                            row=1, col=1)
+
+
+    fig2.add_trace(go.Candlestick(x=df.Date,
                     open=df.Open,
                     high=df.High,
                     low=df.Low,
-                    close=df.Close)])
+                    close=df.Close,
+                    name='Candle Stick'), row=1, col=1)
+
+
+    colors = []
+    for i in range(len(df.Close)):
+        if i != 0:
+            if df.Close[i] > df.Close[i-1]:
+                colors.append('green')
+            else:
+                colors.append('red')
+        else:
+            colors.append('red')
+
+
+    fig2.add_trace(go.Bar(x=df.Date, y=df.Volume,
+                        marker=dict(color=colors),
+                        yaxis='y', name='Volume'),
+                        row=2, col=1)
 
     fig2.update_layout(
-        width=1200,
+        width=1400,
         height=800,
         title=f'{the_label[0]} Analysis during the COVID',
         yaxis_title='Stocks',
@@ -413,8 +328,7 @@ def update_output_div(stock, opt):
     )
 
 
-    # Third Chart
-    # Create figure with secondary y-axis
+    # Third Chartyubplots(specs=[[{"secondary_y": True}]])
     fig3 = make_subplots(specs=[[{"secondary_y": True}]])
 
     # Add traces
@@ -432,7 +346,7 @@ def update_output_div(stock, opt):
     fig3.update_xaxes(title_text="Date")
 
     fig3.update_layout(
-        width=1200,
+        width=1400,
         height=600,
         title=f'{the_label[0]} Analysis during the COVID',
         yaxis_title='Stocks',
@@ -448,7 +362,6 @@ def update_output_div(stock, opt):
         yaxis=dict(
         title=f"{the_label[0]}'s Closing Prices",
         ticksuffix=' $'
-
         ),
         yaxis2=dict(
             title=f"{the_label[0]}'s Returns",
