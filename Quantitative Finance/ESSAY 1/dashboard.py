@@ -124,36 +124,44 @@ app.layout = html.Div([
             ),
         ]),
 
-        html.Div([
-            html.Div([
-                dcc.Graph(
-                    id='first-graph',
-                    figure=first
-                ),
+        dcc.Tabs([
+            dcc.Tab(label='Basic Charts', children=[
+                html.Div([
+                    html.Div([
+                        dcc.Graph(
+                            id='first-graph',
+                            figure=first
+                        ),
+                    ]),
+                ]),
+
+                html.Div([
+                    dash_table.DataTable(
+                        id='table',
+                        columns=[{"name": i, "id": i} for i in stats.columns],
+                        data=stats.to_dict('records'),
+                    ),
+                ]),
+
+                html.Div([
+                    dcc.Graph(
+                        id='second-graph',
+                        figure=second
+                    ),
+                ]),
+
+                html.Div([
+                    dcc.Graph(
+                        id='third-graph',
+                        figure=third
+                    ),
+                ]),
             ]),
-        ]),
 
-        html.Div([
-            dash_table.DataTable(
-                id='table',
-                columns=[{"name": i, "id": i} for i in stats.columns],
-                data=stats.to_dict('records'),
-            ),
-        ]),
+            dcc.Tab(label='Advanced Charts', children=[
 
-        html.Div([
-            dcc.Graph(
-                id='second-graph',
-                figure=second
-            ),
-        ]),
-
-        html.Div([
-            dcc.Graph(
-                id='third-graph',
-                figure=third
-            ),
-        ]),
+            ])
+        ], style={'padding-top': 30})
 ])
 
 @app.callback(
