@@ -30,6 +30,10 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 global ALL_STOCKS
 ALL_STOCKS = []
 
+global stocks_name
+stocks_name = []
+
+
 with open('sp500_sectors.csv', newline='') as f:
     reader = csv.reader(f)
     sp500_s = list(reader)
@@ -86,7 +90,7 @@ third = go.Figure()
 app.layout = html.Div([
         html.Div([
             html.H1('The S&P500 during the COVID crisis'),
-            html.Div('The COVID crisis begins around the February 02 2020 in the world (economicly)'),
+            html.Div('This dashboard shows some financials charts about S&P500 stocks, especially during the COVID'),
         ]),
         html.Div([
             dcc.Dropdown(
@@ -94,31 +98,27 @@ app.layout = html.Div([
                 options=[{'label': k, 'value': k} for k in clean_sp500.keys()],
                 value='Consumer Cyclical'
             ),
-        ]),
+        ], style={'padding-top': 15}),
 
         html.Hr(),
 
         html.Div([
             dcc.Dropdown(id='stock-drop', value='AAP', clearable=False),
-        ]),
-
-        html.Hr(),
+        ], style={'display': 'table-cell', 'width': '75%'}),
 
         html.Div([
             html.Button(id='add-stock', n_clicks=0, children='Add Stock'),
-        ], style={'display': 'inline-block', 'width': '10%'}),
+        ], style={'display': 'table-cell', 'width': '10%', 'padding-left': 25}),
 
         html.Div([
             html.Button(id='remove-stock', n_clicks=0, children='Remove Stock'),
-        ], style={'display': 'inline-block'}),
-
-        html.Div(id='output-stocks'),
+        ], style={'display': 'table-cell', 'padding-left': 25}),
 
         html.Hr(),
 
         html.Div([
             dash_table.DataTable(
-                id='table',
+                id='selected',
                 columns=[{"name": i, "id": i} for i in stats.columns],
                 data=stats.to_dict('records'),
             ),
@@ -131,6 +131,14 @@ app.layout = html.Div([
                     figure=first
                 ),
             ]),
+        ]),
+
+        html.Div([
+            dash_table.DataTable(
+                id='table',
+                columns=[{"name": i, "id": i} for i in stats.columns],
+                data=stats.to_dict('records'),
+            ),
         ]),
 
         html.Div([
@@ -163,17 +171,79 @@ def set_stocks_value(available_options):
 
 
 @app.callback(
-    Output('output-stocks', 'children'),
+    Output('selected', 'data'),
     [Input('add-stock', 'n_clicks'),
-    Input('remove-stock', 'n_clicks'),
-    Input('stock-drop', 'value')])
-def set_stocks_value(btn1, btn2, selection):
+    Input('remove-stock', 'n_clicks')],
+    [State('stock-drop', 'value'),
+    State("stock-drop","options")])
+def set_stocks_value(btn1, btn2, stock, opt):
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
+
+    stats = pd.DataFrame(
+        {
+            'Stock': [0],
+            'Std': [0],
+            'Mean': [0],
+            'Min': [0],
+            'Max': [0],
+            'Kurtosis': [0],
+            'Skewness': [0],
+        },
+        index=[0]
+    )
+
+
     if 'add-stock' in changed_id:
-        ALL_STOCKS.append(selection)
+        ALL_STOCKS.append(stock)
+        stocks_name.append([x['label'] for x in opt if x['value'] == stock][0])
+
+        dfs = {}
+        for stock in ALL_STOCKS:
+            dfs[stock] = yf.Ticker(stock).history(period="2y")
+            dfs[stock]['Returns'] = (dfs[stock].Open - dfs[stock].Open.shift(1)) / dfs[stock].Open.shift(1)
+            dfs[stock] = dfs[stock].iloc[1:]
+            dfs[stock].reset_index(inplace=True)
+            dfs[stock]["Color"] = np.where(dfs[stock]['Returns'] < 0, 'red', 'green')
+
+        stats = pd.DataFrame(
+            {
+                'Stock': [name for name in stocks_name],
+                'Std': [dfs[df].Returns.std() for df in dfs],
+                'Mean': [dfs[df].Returns.mean() for df in dfs],
+                'Min': [dfs[df].Returns.min() for df in dfs],
+                'Max': [dfs[df].Returns.max() for df in dfs],
+                'Kurtosis': [dfs[df].Returns.kurtosis() for df in dfs],
+                'Skewness': [dfs[df].Returns.skew() for df in dfs],
+            },
+            index=[df for df in ALL_STOCKS]
+        )
+
     elif 'remove-stock' in changed_id:
-        ALL_STOCKS.remove(selection)
-    return html.Div(ALL_STOCKS)
+        ALL_STOCKS.remove(stock)
+        stocks_name.remove([x['label'] for x in opt if x['value'] == stock][0])
+
+        dfs = {}
+        for stock in ALL_STOCKS:
+            dfs[stock] = yf.Ticker(stock).history(period="2y")
+            dfs[stock]['Returns'] = (dfs[stock].Open - dfs[stock].Open.shift(1)) / dfs[stock].Open.shift(1)
+            dfs[stock] = dfs[stock].iloc[1:]
+            dfs[stock].reset_index(inplace=True)
+            dfs[stock]["Color"] = np.where(dfs[stock]['Returns'] < 0, 'red', 'green')
+
+        stats = pd.DataFrame(
+            {
+                'Stock': [name for name in stocks_name],
+                'Std': [dfs[df].Returns.std() for df in dfs],
+                'Mean': [dfs[df].Returns.mean() for df in dfs],
+                'Min': [dfs[df].Returns.min() for df in dfs],
+                'Max': [dfs[df].Returns.max() for df in dfs],
+                'Kurtosis': [dfs[df].Returns.kurtosis() for df in dfs],
+                'Skewness': [dfs[df].Returns.skew() for df in dfs],
+            },
+            index=[df for df in ALL_STOCKS]
+        )
+
+    return stats.to_dict('records')
 
 
 @app.callback(
