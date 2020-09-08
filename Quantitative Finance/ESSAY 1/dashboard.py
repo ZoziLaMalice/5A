@@ -11,11 +11,11 @@ import html5lib
 import plotly.express as px
 from datetime import datetime
 import plotly.graph_objects as go
+import plotly.figure_factory as ff
 from plotly.subplots import make_subplots
 import numpy as np
 import re
 from scipy.stats import linregress, norm
-
 
 def bbands(price, window_size=10, num_of_std=5):
     rolling_mean = price.rolling(window=window_size).mean()
@@ -58,7 +58,7 @@ for sector, value in clean_sp500.items():
 
 global market
 market = yf.Ticker('^gspc').history(period="2y")
-market['Returns'] = (market.Open - market.Open.shift(1)) / market.Open.shift(1)
+market['Returns'] = market.Close.pct_change()
 market = market.iloc[1:]
 market.reset_index(inplace=True)
 
@@ -79,12 +79,14 @@ stats = pd.DataFrame(
         'Skewness': [market.Returns.skew()],
         'Alpha': [linregress(market.Returns, market.Returns).intercept],
         'Beta': [linregress(market.Returns, market.Returns).slope],
-        'VaR 95% HS': [np.percentile(market.Returns, 0.05)],
-        'VaR 95% DN': [norm.cdf(norm.ppf(0.95)) * market.Returns.std()],
+        'VaR 95% HS': [market.Returns.sort_values(ascending=True).quantile(0.05)],
+        'VaR 95% DN': [norm.ppf(1-0.95, market.Returns.mean(), market.Returns.std())],
         'Systemic Risk': [linregress(market.Returns, market.Returns).slope**2 * market.Returns.var()]
     },
     index=[0]
 ).round(6)
+
+correl = pd.DataFrame([market.Returns], columns=['S&P500'], index=['S&P500'])
 
 #First Tab Charts
 # Market Chart
@@ -148,6 +150,15 @@ third = go.Figure()
 # Second Tab Charts
 # Fourth Chart
 fourth = go.Figure()
+
+# Heatmap
+heatmap = go.Figure()
+
+# Variance CoVariance Matrix
+covariance = go.Figure()
+
+# Efficient Frontier
+efficient_frontier = go.Figure()
 
 app.layout = html.Div([
         html.Div([
@@ -247,7 +258,34 @@ app.layout = html.Div([
                         id='VaR-HS',
                         figure=fourth
                     )
-                ])
+                ]),
+
+                html.Hr(),
+
+                html.Div([
+                    dcc.Graph(
+                        id='correl',
+                        figure=heatmap
+                    )
+                ]),
+
+                html.Hr(),
+
+                html.Div([
+                    dcc.Graph(
+                        id='cov',
+                        figure=covariance
+                    )
+                ]),
+
+                html.Hr(),
+
+                html.Div([
+                    dcc.Graph(
+                        id='efficient-frontier',
+                        figure=efficient_frontier
+                    )
+                ]),
             ])
         ], style={'padding-top': 30})
 ])
@@ -288,8 +326,8 @@ def set_stocks_value(btn1, btn2, stock, opt):
             'Skewness': [market.Returns.skew()],
             'Alpha': [linregress(market.Returns, market.Returns).intercept],
             'Beta': [linregress(market.Returns, market.Returns).slope],
-            'VaR 95% HS': [np.percentile(market.Returns, 0.05)],
-            'VaR 95% DN': [norm.cdf(norm.ppf(0.95)) * market.Returns.std()],
+            'VaR 95% HS': [market.Returns.sort_values(ascending=True).quantile(0.05)],
+            'VaR 95% DN': [norm.ppf(1-0.95, market.Returns.mean(), market.Returns.std())],
             'Systemic Risk': [linregress(market.Returns, market.Returns).slope**2 * market.Returns.var()]
         },
         index=[0]
@@ -302,7 +340,7 @@ def set_stocks_value(btn1, btn2, stock, opt):
         dfs = {}
         for stock, _ in ALL_STOCKS.items():
             dfs[stock] = yf.Ticker(stock).history(period="2y")
-            dfs[stock]['Returns'] = (dfs[stock].Open - dfs[stock].Open.shift(1)) / dfs[stock].Open.shift(1)
+            dfs[stock]['Returns'] = dfs[stock].Close.pct_change()
             dfs[stock] = dfs[stock].iloc[1:]
             dfs[stock].reset_index(inplace=True)
             dfs[stock]["Color"] = np.where(dfs[stock]['Returns'] < 0, 'red', 'green')
@@ -318,11 +356,11 @@ def set_stocks_value(btn1, btn2, stock, opt):
                 'Max': [dfs[df].Returns.max() for df in dfs],
                 'Kurtosis': [dfs[df].Returns.kurtosis() for df in dfs],
                 'Skewness': [dfs[df].Returns.skew() for df in dfs],
-                'Alpha': [linregress(dfs[df].Returns, market.Returns).intercept for df in dfs],
-                'Beta': [linregress(dfs[df].Returns, market.Returns).slope for df in dfs],
-                'VaR 95% HS': [np.percentile(dfs[df].Returns, 0.05) for df in dfs],
-                'VaR 95% DN': [norm.cdf(norm.ppf(0.95)) * dfs[df].Returns.std() for df in dfs],
-                'Systemic Risk': [linregress(dfs[df].Returns, market.Returns).slope**2 * market.Returns.var() for df in dfs]
+                'Alpha': [linregress(dfs[df].Returns, market[market.Date >= dfs[df].Date.min()].Returns).intercept for df in dfs],
+                'Beta': [linregress(dfs[df].Returns, market[market.Date >= dfs[df].Date.min()].Returns).slope for df in dfs],
+                'VaR 95% HS': [dfs[df].Returns.sort_values(ascending=True).quantile(0.05) for df in dfs],
+                'VaR 95% DN': [norm.ppf(1-0.95, dfs[df].Returns.mean(), dfs[df].Returns.std()) for df in dfs],
+                'Systemic Risk': [linregress(dfs[df].Returns, market[market.Date >= dfs[df].Date.min()].Returns).slope**2 * market[market.Date >= dfs[df].Date.min()].Returns.var() for df in dfs]
             },
             index=[df for _, df in ALL_STOCKS.items()]
         ).round(6)
@@ -333,7 +371,7 @@ def set_stocks_value(btn1, btn2, stock, opt):
         dfs = {}
         for stock, _ in ALL_STOCKS.items():
             dfs[stock] = yf.Ticker(stock).history(period="2y")
-            dfs[stock]['Returns'] = (dfs[stock].Open - dfs[stock].Open.shift(1)) / dfs[stock].Open.shift(1)
+            dfs[stock]['Returns'] = dfs[stock].Close.pct_change()
             dfs[stock] = dfs[stock].iloc[1:]
             dfs[stock].reset_index(inplace=True)
             dfs[stock]["Color"] = np.where(dfs[stock]['Returns'] < 0, 'red', 'green')
@@ -349,11 +387,11 @@ def set_stocks_value(btn1, btn2, stock, opt):
                 'Max': [dfs[df].Returns.max() for df in dfs],
                 'Kurtosis': [dfs[df].Returns.kurtosis() for df in dfs],
                 'Skewness': [dfs[df].Returns.skew() for df in dfs],
-                'Alpha': [linregress(dfs[df].Returns, market.Returns).intercept for df in dfs],
-                'Beta': [linregress(dfs[df].Returns, market.Returns).slope for df in dfs],
-                'VaR 95% HS': [np.percentile(dfs[df].Returns, 0.05) for df in dfs],
-                'VaR 95% DN': [norm.cdf(norm.ppf(0.95)) * dfs[df].Returns.std() for df in dfs],
-                'Systemic Risk': [linregress(dfs[df].Returns, market.Returns).slope**2 * market.Returns.var() for df in dfs]
+                'Alpha': [linregress(dfs[df].Returns, market[market.Date >= dfs[df].Date.min()].Returns).intercept for df in dfs],
+                'Beta': [linregress(dfs[df].Returns, market[market.Date >= dfs[df].Date.min()].Returns).slope for df in dfs],
+                'VaR 95% HS': [dfs[df].Returns.sort_values(ascending=True).quantile(0.05) for df in dfs],
+                'VaR 95% DN': [norm.ppf(1-0.95, dfs[df].Returns.mean(), dfs[df].Returns.std()) for df in dfs],
+                'Systemic Risk': [linregress(dfs[df].Returns, market[market.Date >= dfs[df].Date.min()].Returns).slope**2 * market[market.Date >= dfs[df].Date.min()].Returns.var() for df in dfs]
             },
             index=[df for _, df in ALL_STOCKS.items()]
         ).round(6)
@@ -374,7 +412,7 @@ def update_output_div(stock, opt):
     the_label = [x['label'] for x in opt if x['value'] == stock]
 
     df = yf.Ticker(stock).history(period="2y")
-    df['Returns'] = (df.Open - df.Open.shift(1)) / df.Open.shift(1)
+    df['Returns'] = df.Close.pct_change()
     df = df.iloc[1:]
     df.reset_index(inplace=True)
     df["Color"] = np.where(df['Returns'] < 0, 'red', 'green')
@@ -390,11 +428,11 @@ def update_output_div(stock, opt):
             'Max': [df.Returns.max()],
             'Kurtosis': [df.Returns.kurtosis()],
             'Skewness': [df.Returns.skew()],
-            'Alpha': [linregress(df.Returns, market.Returns).intercept],
-            'Beta': [linregress(df.Returns, market.Returns).slope],
-            'VaR 95% HS': [np.percentile(df.Returns, 0.05)],
-            'VaR 95% DN': [norm.cdf(norm.ppf(0.95)) * df.Returns.std()],
-            'Systemic Risk': [linregress(df.Returns, market.Returns).slope**2 * market.Returns.var()]
+            'Alpha': [linregress(df.Returns, market[market.Date >= df.Date.min()].Returns).intercept],
+            'Beta': [linregress(df.Returns, market[market.Date >= df.Date.min()].Returns).slope],
+            'VaR 95% HS': [df.Returns.sort_values(ascending=True).quantile(0.05)],
+            'VaR 95% DN': [norm.ppf(1-0.95, df.Returns.mean(), df.Returns.std())],
+            'Systemic Risk': [linregress(df.Returns, market[market.Date >= df.Date.min()].Returns).slope**2 * market[market.Date >= df.Date.min()].Returns.var()]
         },
         index=[0]
     ).round(6)
@@ -566,17 +604,126 @@ def update_output_div(stock, opt):
 
 @app.callback(
     Output('drop-portfolio', 'children'),
+    Output('correl', 'figure'),
+    Output('cov', 'figure'),
+    Output('efficient-frontier', 'figure'),
     [Input('load-portfolio', 'n_clicks')]
 )
 def load_portfolio(n_clicks):
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
-    if 'load-portfolio' in changed_id:
-        return html.Div([
-            dcc.Dropdown(
-                id='portfolio-stocks',
-                options=[{'label': label, 'value': value} for value, label in ALL_STOCKS.items()],
+    dfs = {}
+    for stock, _ in ALL_STOCKS.items():
+        dfs[stock] = yf.Ticker(stock).history(period="2y")
+        dfs[stock]['Returns'] = dfs[stock].Close.pct_change()
+        dfs[stock] = dfs[stock].iloc[1:]
+        dfs[stock].reset_index(inplace=True)
+
+    date_min = max([dfs[stock].Date.min() for stock in dfs])
+    for df in dfs:
+        dfs[df] = dfs[df][dfs[df].Date >= date_min]
+        dfs[df].reset_index(inplace=True)
+
+
+    full_returns = pd.concat([dfs[df].Returns for df in dfs], axis=1)
+    full_returns.columns = [df for df in dfs]
+
+    full_close = pd.concat([dfs[df].Close for df in dfs], axis=1)
+    full_close.columns = [df for df in dfs]
+    log_ret = np.log(full_close/full_close.shift(1))
+
+
+    cov = pd.DataFrame.cov(full_returns)
+
+
+    correl_matrix = np.corrcoef([dfs[stock].Returns for stock in dfs])
+
+    correl = pd.DataFrame(correl_matrix, columns=[stock for stock in dfs],
+                        index=[stock for stock in dfs])
+
+    children = html.Div([
+                dcc.Dropdown(
+                    id='portfolio-stocks',
+                    options=[{'label': label, 'value': value} for value, label in ALL_STOCKS.items()],
+                ),
+            ])
+
+    heatmap = ff.create_annotated_heatmap(
+        z=correl.values[::-1],
+        x=[stock for stock in dfs],
+        y=[stock for stock in dfs][::-1],
+        xgap=10,
+        ygap=10
+    )
+
+    covariance = ff.create_annotated_heatmap(
+        z=cov.values[::-1],
+        x=[stock for stock in dfs],
+        y=[stock for stock in dfs][::-1],
+        xgap=10,
+        ygap=10
+    )
+
+    np.random.seed(42)
+    num_ports = 6000
+    all_weights = np.zeros((num_ports, len(full_close.columns)))
+    ret_arr = np.zeros(num_ports)
+    vol_arr = np.zeros(num_ports)
+    sharpe_arr = np.zeros(num_ports)
+
+    for x in range(num_ports):
+        # Weights
+        weights = np.array(np.random.random(len(ALL_STOCKS))) # Problem here
+        weights = weights/np.sum(weights)
+
+        # Save weights
+        all_weights[x,:] = weights
+
+        # Expected return
+        ret_arr[x] = np.sum( (log_ret.mean() * weights * 252))
+
+        # Expected volatility
+        vol_arr[x] = np.sqrt(np.dot(weights.T, np.dot(log_ret.cov()*252, weights)))
+
+        # Sharpe Ratio
+        sharpe_arr[x] = ret_arr[x]/vol_arr[x]
+
+    max_sr_ret = ret_arr[sharpe_arr.argmax()]
+    max_sr_vol = vol_arr[sharpe_arr.argmax()]
+
+    efficient_frontier = go.Figure(go.Scatter(
+        x=vol_arr,
+        y=ret_arr,
+        marker=dict(
+            size=5,
+            color=sharpe_arr,
+            colorbar=dict(
+                title="Colorbar"
             ),
-        ])
+            colorscale="Viridis"
+        ),
+        mode="markers",
+        name="Portfolios (6000)"))
+
+    efficient_frontier.add_trace(go.Scatter(
+        x=[max_sr_vol],
+        y=[max_sr_ret],
+        marker={'color':'red'},
+        mode='markers',
+        name='Efficient Portfolio'
+    ))
+
+    efficient_frontier.update_layout(legend=dict(
+        yanchor="top",
+        y=1.2,
+        xanchor="left",
+        x=0.01
+    ))
+
+
+    if 'load-portfolio' in changed_id:
+        return children, heatmap, covariance, efficient_frontier
+    else:
+        return html.Div([' ']), go.Figure(), go.Figure(), go.Figure()
 
 @app.callback(
     Output('portfolio-stocks', 'value'),
@@ -595,32 +742,58 @@ def update_VaR_chart(stock, opt):
     the_label = [x['label'] for x in opt if x['value'] == stock]
 
     df = yf.Ticker(stock).history(period="2y")
-    df['Returns'] = (df.Open - df.Open.shift(1)) / df.Open.shift(1)
+    df['Returns'] = df.Close.pct_change()
     df = df.iloc[1:]
     df.reset_index(inplace=True)
-    var = go.Figure()
-    var.add_trace(go.Histogram(
-            x=df.Returns*100
-    ))
+
+    var = ff.create_distplot([df.Returns], ['Historical Simulation'], bin_size=.002, show_rug=False, colors=['#1669e9', '#e4ed1e'])
+
+    # var.add_trace(go.Scatter(x=[np.arange(df.Returns.sort_values(ascending=True).quantile(0.05), df.Returns.min(), -0.1)],
+    # y=[norm.pdf(np.linspace(np.mean(df.Returns) - 3*np.std(df.Returns), np.mean(df.Returns) + 3* np.std(df.Returns), 100), np.mean(df.Returns), np.std(df.Returns))],
+    # fill='tonexty'))
+
+    # var.add_trace(go.Scatter(
+    #     x=[-0.15, df.Returns.sort_values(ascending=True).quantile(0.05)],
+    #     y=[0, 0],
+    #     fill='tozeroy'
+    # ))
 
     var.add_trace(go.Scatter(
-        mode= "lines+markers+text",
+        mode= "markers+text",
         text="VaR",
-        name="Value at Risk",
-        x=[np.percentile(df.Returns*100, 0.05)],
+        name="Value at Risk 95%",
+        x=[df.Returns.sort_values(ascending=True).quantile(0.05)],
         y=[0],
-        marker={"size": 20},
+        marker={"size": 20, 'color': "#f12828"},
         textposition= 'bottom center'
     ))
 
-    return var
+    # var = go.Figure()
 
-    # trace1 = {
-    # "name": "Fitted normal distribution",
-    # "type": "scatter",
-    # "x": [-0.019559895712306395, -0.01903855131815702, -0.018517206924007643, -0.017995862529858266, -0.01747451813570889, -0.016953173741559517, -0.01643182934741014, -0.015910484953260765, -0.015389140559111388, -0.014867796164962012, -0.014346451770812636, -0.013825107376663261, -0.013303762982513885, -0.012782418588364508, -0.012261074194215134, -0.011739729800065758, -0.011218385405916381, -0.010697041011767005, -0.010175696617617629, -0.009654352223468254, -0.009133007829318878, -0.008611663435169501, -0.008090319041020127, -0.0075689746468707506, -0.007047630252721374, -0.006526285858571998, -0.006004941464422622, -0.005483597070273247, -0.004962252676123871, -0.0044409082819744945, -0.00391956388782512, -0.0033982194936757436, -0.0028768750995263673, -0.002355530705376991, -0.0018341863112276147, -0.0013128419170782384, -0.000791497522928862, -0.0002701531287794892, 0.0002511912653698871, 0.0007725356595192634, 0.0012938800536686397, 0.001815224447818016, 0.0023365688419673923, 0.0028579132361167686, 0.0033792576302661415, 0.0039006020244155178, 0.004421946418564894, 0.00494329081271427, 0.005464635206863647, 0.005985979601013023, 0.006507323995162399, 0.007028668389311776, 0.007550012783461152, 0.008071357177610525, 0.008592701571759901, 0.009114045965909277, 0.009635390360058654, 0.01015673475420803, 0.010678079148357406, 0.011199423542506783, 0.011720767936656155, 0.012242112330805535, 0.012763456724954908, 0.013284801119104288, 0.01380614551325366, 0.014327489907403033, 0.014848834301552413, 0.015370178695701786, 0.015891523089851166, 0.01641286748400054, 0.01693421187814992, 0.01745555627229929, 0.01797690066644867, 0.018498245060598044, 0.019019589454747417, 0.019540933848896797, 0.02006227824304617, 0.02058362263719555, 0.021104967031344922, 0.021626311425494302, 0.022147655819643675, 0.022669000213793047, 0.023190344607942427, 0.0237116890020918, 0.02423303339624118, 0.024754377790390553, 0.025275722184539932, 0.025797066578689305, 0.026318410972838678, 0.026839755366988058, 0.02736109976113743, 0.02788244415528681, 0.028403788549436183, 0.028925132943585563, 0.029446477337734936, 0.029967821731884316, 0.03048916612603369, 0.03101051052018306, 0.03153185491433244, 0.032053199308481814, 0.032574543702631194], 
-    # "y": [0.1285998709974904, 0.17578526227475214, 0.23837318181769354, 0.3206751669941835, 0.4279630455863012, 0.5666047529764865, 0.7441957079092862, 0.9696770398275635, 1.2534299502515125, 1.607333613474029, 2.0447724734872765, 2.5805778011115827, 3.2308881824676416, 4.012914461232168, 4.944596771697046, 6.044144843507723, 7.329457814663846, 8.817426326796141, 10.523127528356918, 12.458932456061957, 14.633554624171367, 17.051077900799207, 19.710010149876805, 22.60241585709473, 25.713185222960764, 29.01949825089758, 32.490539589474594, 36.08751294285306, 39.76399267911117, 43.46663512653501, 47.1362536045912, 50.70924049313906, 54.11929790570787, 57.2994173198142, 60.1840294460824, 62.71123026508556, 64.82497891814933, 66.47715907501016, 67.62939814820672, 68.25454839451042, 68.33775009904335, 67.87701870573449, 66.88332350210283, 65.38015350229053, 63.402594517445976, 60.99596804785198, 58.2141057143248, 55.11735091056713, 51.77039107978278, 48.24002889218985, 44.59299857110171, 40.89392516341894, 37.203510621961534, 33.57701246925938, 30.06306008083197, 26.7028318803451, 23.529595542048366, 20.568594028926285, 17.83724406112596, 15.345601170681517, 13.097037251028336, 11.089072492183966, 9.3143035270822, 7.761372970202332, 6.415931598739888, 5.2615524068974535, 4.280564836782058, 3.454786887465066, 2.7661418633456614, 2.197154719041724, 1.7313299211933266, 1.3534182646174748, 1.04958408143547, 0.8074868182538972, 0.6162921719782214, 0.4666280754435366, 0.3505000489720698, 0.2611790299600404, 0.1930729934113766, 0.14159168798455676, 0.1030118038844448, 0.07434798957073578, 0.05323343246821949, 0.037812266914975204, 0.026644891951414205, 0.018626369580271626, 0.012917410827051983, 0.008887011298169382, 0.006065533368759336, 0.004106910741710634, 0.002758636866586088, 0.001838259467669355, 0.0012152121158017426, 0.0007969487139266641, 0.0005184915240935834, 0.0003346462419423725, 0.0002142709263188337, 0.0001361048326324508, 8.576633428420223e-05, 5.361584498352188e-05, 3.3250828054666355e-05]
-    # }
+    # var.add_trace(go.Histogram(
+    #     x=df.Returns,
+    #     nbinsx=1,
+    #     histnorm='probability density'
+    #     ))
+
+    # var.add_trace(go.Scatter(
+    #     x=np.linspace(np.mean(df.Returns) - 3*np.std(df.Returns), np.mean(df.Returns) + 3* np.std(df.Returns), 100),
+    #     y=norm.pdf(np.linspace(np.mean(df.Returns) - 3*np.std(df.Returns), np.mean(df.Returns) + 3* np.std(df.Returns), 100), np.mean(df.Returns), np.std(df.Returns)),
+    # ))
+
+    # var.add_trace(go.Scatter(
+    #     x=[-0.15, df.Returns.sort_values(ascending=True).quantile(0.05)],
+    #     y=[0, 0],
+    #     fill='tonexty'
+    # ))
+
+
+    var.update_layout(
+        width=1400,
+        height=600,
+    )
+
+    return var
 
 
 if __name__ == '__main__':
