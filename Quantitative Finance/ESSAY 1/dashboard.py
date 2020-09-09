@@ -2,6 +2,7 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output, State
+from dash.exceptions import PreventUpdate
 import dash_table
 import yfinance as yf
 import pandas as pd
@@ -105,6 +106,8 @@ market_chart.add_trace(go.Scatter(x= covid.Date, y=covid.Case, name='COVID', yax
 
 market_chart.update_layout(
     updatemenus=[dict(
+        x=1.1,
+        y=0.8,
         active=0,
         type='buttons',
         direction='down',
@@ -186,16 +189,25 @@ app.layout = html.Div([
         html.Hr(),
 
         html.Div([
-            dcc.Dropdown(id='stock-drop', value='AAP', clearable=False),
-        ], style={'display': 'table-cell', 'width': '75%'}),
+            html.Div([
+                dcc.Dropdown(id='stock-drop', value='AAP', clearable=False),
+            ], style={'display': 'table-cell', 'width': '65%'}),
 
-        html.Div([
-            html.Button(id='add-stock', n_clicks=0, children='Add Stock'),
-        ], style={'display': 'table-cell', 'width': '10%', 'padding-left': 25}),
+            html.Div([
+                html.Button(id='add-stock', n_clicks=0, children='Add Stock'),
+            ], style={'display': 'table-cell', 'width': '10%', 'padding-left': 25}),
 
-        html.Div([
-            html.Button(id='remove-stock', n_clicks=0, children='Remove Stock'),
-        ], style={'display': 'table-cell', 'padding-left': 25}),
+            html.Div([
+                html.Button(id='remove-stock', n_clicks=0, children='Remove Stock'),
+            ], style={'display': 'table-cell', 'padding-left': 25}),
+
+            html.Div([
+                html.Button(id='remove-market', n_clicks=0, children='Remove Market'),
+            ], style={'display': 'table-cell', 'padding-left': 25}),
+
+            html.Div(id='hidden-div', style={'display':'none'})
+
+        ], style={'display': 'table'}),
 
         html.Hr(),
 
@@ -287,6 +299,14 @@ app.layout = html.Div([
                     style={'margin': 0, 'position': 'absolute', 'left': '40%'})
                 ], style={'padding': 40}),
 
+                html.Div([
+                    dash_table.DataTable(
+                        id='weights-equal',
+                        columns=[{"name": 'Stock', "id": 'Stock'}, {'name': 'Weight', 'id': 'Weight'}],
+                        data=[0, 0],
+                    ),
+                ], style={'width': '30%', 'padding': 25, 'left': '33.5%', 'position': 'relative'}),
+
                 html.Div(id='equal-weighted-portfolio', children=[
 
                 ], style={'padding-top': 15, 'font-size': 20, 'text-align': 'center'}),
@@ -297,6 +317,14 @@ app.layout = html.Div([
                     html.Button(id='load-portfolio', n_clicks=0, children='Generate Efficient Frontier',
                     style={'margin': 0, 'position': 'absolute', 'left': '41.5%'})
                 ], style={'padding': 40}),
+
+                html.Div([
+                    dash_table.DataTable(
+                        id='weights-sharpe',
+                        columns=[{"name": 'Stock', "id": 'Stock'}, {'name': 'Weight', 'id': 'Weight'}],
+                        data=[0, 0],
+                    ),
+                ], style={'width': '30%', 'padding': 25, 'left': '33.5%', 'position': 'relative'}),
 
                 html.Div([
                     dcc.Graph(
@@ -317,15 +345,24 @@ app.layout = html.Div([
                     style={'margin': 0, 'position': 'absolute', 'left': '50%', 'display': 'table-cell'})
                 ], style={'padding': 40, 'display': 'table'}),
 
+                html.Div([
+                    dash_table.DataTable(
+                        id='weights-min-var',
+                        columns=[{"name": 'Stock', "id": 'Stock'}, {'name': 'Weight', 'id': 'Weight'}],
+                        data=[0, 0],
+                    ),
+                ], style={'width': '30%', 'padding': 25, 'left': '33.5%', 'position': 'relative'}),
+
                 html.Div(id='min-var-portfolio', children=[
 
-                ]),
+                ], style={'padding-top': 15, 'font-size': 20, 'text-align': 'center'}),
 
                 html.Hr(),
 
             ]),
         ], style={'padding-top': 30}),
 ])
+
 
 @app.callback(
     Output('stock-drop', 'options'),
@@ -344,10 +381,11 @@ def set_stocks_value(available_options):
 @app.callback(
     Output('selected', 'data'),
     [Input('add-stock', 'n_clicks'),
-    Input('remove-stock', 'n_clicks')],
+    Input('remove-stock', 'n_clicks'),
+    Input('remove-market', 'n_clicks')],
     [State('stock-drop', 'value'),
     State("stock-drop","options")])
-def set_stocks_value(btn1, btn2, stock, opt):
+def set_stocks_value(btn1, btn2, btn3, stock, opt):
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
 
     stats = pd.DataFrame(
@@ -373,8 +411,6 @@ def set_stocks_value(btn1, btn2, stock, opt):
 
     if 'add-stock' in changed_id:
         ALL_STOCKS.update({stock: [x['label'] for x in opt if x['value'] == stock][0]})
-
-        print(ALL_STOCKS)
 
         dfs = {}
         for stock, _ in ALL_STOCKS.items():
@@ -405,7 +441,10 @@ def set_stocks_value(btn1, btn2, stock, opt):
         ).round(6)
 
     elif 'remove-stock' in changed_id:
-        del ALL_STOCKS[stock]
+        try:
+            del ALL_STOCKS[stock]
+        except KeyError:
+            pass
 
         dfs = {}
         for stock, _ in ALL_STOCKS.items():
@@ -434,6 +473,40 @@ def set_stocks_value(btn1, btn2, stock, opt):
             },
             index=[df for _, df in ALL_STOCKS.items()]
         ).round(6)
+
+    elif 'remove-market' in changed_id:
+        try:
+            del ALL_STOCKS['^GSPC']
+        except KeyError:
+            pass
+
+        dfs = {}
+        for stock, _ in ALL_STOCKS.items():
+            dfs[stock] = yf.Ticker(stock).history(period="2y")
+            dfs[stock]['Returns'] = dfs[stock].Close.pct_change()
+            dfs[stock] = dfs[stock].iloc[1:]
+            dfs[stock].reset_index(inplace=True)
+            dfs[stock]["Color"] = np.where(dfs[stock]['Returns'] < 0, 'red', 'green')
+
+        stats = pd.DataFrame(
+            {
+                'Stock': [name for _, name in ALL_STOCKS.items()],
+                'Std': [dfs[df].Returns.std() for df in dfs],
+                'Annual Std': [dfs[df].Returns.std()* np.sqrt(252) for df in dfs],
+                'Mean': [dfs[df].Returns.mean() for df in dfs],
+                'Median': [np.median(dfs[df].Returns) for df in dfs],
+                'Min': [dfs[df].Returns.min() for df in dfs],
+                'Max': [dfs[df].Returns.max() for df in dfs],
+                'Kurtosis': [dfs[df].Returns.kurtosis() for df in dfs],
+                'Skewness': [dfs[df].Returns.skew() for df in dfs],
+                'Alpha': [linregress(dfs[df].Returns, market[market.Date >= dfs[df].Date.min()].Returns).intercept for df in dfs],
+                'Beta': [linregress(dfs[df].Returns, market[market.Date >= dfs[df].Date.min()].Returns).slope for df in dfs],
+                'VaR 95% HS': [dfs[df].Returns.sort_values(ascending=True).quantile(0.05) for df in dfs],
+                'VaR 95% DN': [norm.ppf(1-0.95, dfs[df].Returns.mean(), dfs[df].Returns.std()) for df in dfs],
+                'Systemic Risk': [linregress(dfs[df].Returns, market[market.Date >= dfs[df].Date.min()].Returns).slope**2 * market[market.Date >= dfs[df].Date.min()].Returns.var() for df in dfs]
+            },
+            index=[df for _, df in ALL_STOCKS.items()]
+        )
 
     return stats.to_dict('records')
 
@@ -476,6 +549,9 @@ def update_output_div(stock, opt):
         index=[0]
     ).round(6)
 
+    df['log_ret'] = np.log(df.Close/df.Close.shift(1))
+    df["log_Color"] = np.where(df['log_ret'] < 0, 'red', 'green')
+
     # First Chart
     fig = make_subplots(specs=[[{"secondary_y": True}]])
     fig.add_trace(
@@ -491,6 +567,8 @@ def update_output_div(stock, opt):
 
     fig.update_layout(
         updatemenus=[dict(
+            x=1.1,
+            y=0.8,
             active=0,
             type='buttons',
             direction='down',
@@ -611,6 +689,11 @@ def update_output_div(stock, opt):
         secondary_y=True
     )
 
+    fig3.add_trace(
+        go.Bar(x=df.Date, y=(df.log_ret * 100), name="Log Returns", marker_color=df.log_Color, yaxis="y1"),
+        secondary_y=True
+    )
+
     # Set x-axis title
     fig3.update_xaxes(title_text="Date")
 
@@ -637,6 +720,24 @@ def update_output_div(stock, opt):
             ticksuffix = '%'
         )
     )
+
+    fig3.update_layout(
+        updatemenus=[dict(
+            x=1.1,
+            y=0.8,
+            active=0,
+            type='buttons',
+            direction='down',
+            buttons=list(
+                [dict(label = 'Returns',
+                    method = 'update',
+                    args = [{'visible': [True, True, False]}]),
+                dict(label = 'Log Returns',
+                    method = 'update',
+                    args = [{'visible': [True, False, True]}]),
+                ])
+            )
+        ])
 
     return fig, fig2, fig3, stats.to_dict('records')
 
@@ -774,228 +875,251 @@ def update_VaR_chart(stock, opt):
 
 @app.callback(
     Output('equal-weighted-portfolio', 'children'),
-    [Input('equal-weighted', 'n_clicks')]
+    Output('weights-equal', 'data'),
+    [Input('equal-weighted', 'n_clicks')],
 )
 def equal_weighted(n_clicks):
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
-    dfs = {}
-    for stock, _ in ALL_STOCKS.items():
-        dfs[stock] = yf.Ticker(stock).history(period="2y")
-        dfs[stock]['Returns'] = dfs[stock].Close.pct_change()
-        dfs[stock] = dfs[stock].iloc[1:]
-        dfs[stock].reset_index(inplace=True)
-
-    date_min = max([dfs[stock].Date.min() for stock in dfs])
-    for df in dfs:
-        dfs[df] = dfs[df][dfs[df].Date >= date_min]
-        dfs[df].reset_index(inplace=True)
-
-
-    full_returns = pd.concat([dfs[df].Returns for df in dfs], axis=1)
-    full_returns.columns = [df for df in dfs]
-
-    full_close = pd.concat([dfs[df].Close for df in dfs], axis=1)
-    full_close.columns = [df for df in dfs]
-    log_ret = np.log(full_close/full_close.shift(1))
-
-    np.random.seed(42)
-    all_weights = np.zeros((1, len(full_close.columns)))
-    ret_arr = np.zeros(1)
-    vol_arr = np.zeros(1)
-    sharpe_arr = np.zeros(1)
-
-
-    # Weights
-    weights = np.array(np.random.random(len(ALL_STOCKS))) # Problem here
-    weights = weights/np.sum(weights)
-
-    # Expected return
-    ret_arr = np.sum( (log_ret.mean() * weights * 252))
-
-    # Expected volatility
-    vol_arr = np.sqrt(np.dot(weights.T, np.dot(log_ret.cov()*252, weights)))
 
     if 'equal-weighted' in changed_id:
+        dfs = {}
+        for stock, _ in ALL_STOCKS.items():
+            dfs[stock] = yf.Ticker(stock).history(period="2y")
+            dfs[stock]['Returns'] = dfs[stock].Close.pct_change()
+            dfs[stock] = dfs[stock].iloc[1:]
+            dfs[stock].reset_index(inplace=True)
+
+        date_min = max([dfs[stock].Date.min() for stock in dfs])
+        for df in dfs:
+            dfs[df] = dfs[df][dfs[df].Date >= date_min]
+            dfs[df].reset_index(inplace=True)
+
+
+        full_returns = pd.concat([dfs[df].Returns for df in dfs], axis=1)
+        full_returns.columns = [df for df in dfs]
+
+        full_close = pd.concat([dfs[df].Close for df in dfs], axis=1)
+        full_close.columns = [df for df in dfs]
+        log_ret = np.log(full_close/full_close.shift(1))
+
+        np.random.seed(42)
+        all_weights = np.zeros((1, len(full_close.columns)))
+        ret_arr = np.zeros(1)
+        vol_arr = np.zeros(1)
+        sharpe_arr = np.zeros(1)
+
+
+        # Weights
+        weights = np.array(np.random.random(len(ALL_STOCKS))) # Problem here
+        weights = weights/np.sum(weights)
+
+        # Expected return
+        ret_arr = np.sum( (log_ret.mean() * weights * 252))
+
+        # Expected volatility
+        vol_arr = np.sqrt(np.dot(weights.T, np.dot(log_ret.cov()*252, weights)))
+
+        data = pd.DataFrame(
+            {
+                'Stock': [stock for _, stock in ALL_STOCKS.items()],
+                'Weight': [100/len(ALL_STOCKS)] * len(ALL_STOCKS)
+            })
+
         return '''
         Your equal weighted portfolio has a return of {}, with a volatility of {}
-        '''.format(ret_arr, vol_arr)
+        '''.format(ret_arr, vol_arr), data.to_dict('records')
     else:
-        return ''
+        return '', []
 
 
 @app.callback(
     Output('efficient-frontier', 'figure'),
     Output('max-sharpe-text', 'children'),
+    Output('weights-sharpe', 'data'),
     [Input('load-portfolio', 'n_clicks')]
 )
 def load_portfolio(n_clicks):
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
-    dfs = {}
-    for stock, _ in ALL_STOCKS.items():
-        dfs[stock] = yf.Ticker(stock).history(period="2y")
-        dfs[stock]['Returns'] = dfs[stock].Close.pct_change()
-        dfs[stock] = dfs[stock].iloc[1:]
-        dfs[stock].reset_index(inplace=True)
-
-    date_min = max([dfs[stock].Date.min() for stock in dfs])
-    for df in dfs:
-        dfs[df] = dfs[df][dfs[df].Date >= date_min]
-        dfs[df].reset_index(inplace=True)
-
-
-    full_returns = pd.concat([dfs[df].Returns for df in dfs], axis=1)
-    full_returns.columns = [df for df in dfs]
-
-    full_close = pd.concat([dfs[df].Close for df in dfs], axis=1)
-    full_close.columns = [df for df in dfs]
-    log_ret = np.log(full_close/full_close.shift(1))
-
-    np.random.seed(42)
-    num_ports = 6000
-    all_weights = np.zeros((num_ports, len(full_close.columns)))
-    ret_arr = np.zeros(num_ports)
-    vol_arr = np.zeros(num_ports)
-    sharpe_arr = np.zeros(num_ports)
-
-    try:
-        for x in range(num_ports):
-            # Weights
-            weights = np.array(np.random.random(len(ALL_STOCKS))) # Problem here
-            weights = weights/np.sum(weights)
-
-            # Save weights
-            all_weights[x,:] = weights
-
-            # Expected return
-            ret_arr[x] = np.sum( (log_ret.mean() * weights * 252))
-
-            # Expected volatility
-            vol_arr[x] = np.sqrt(np.dot(weights.T, np.dot(log_ret.cov()*252, weights)))
-
-            # Sharpe Ratio
-            sharpe_arr[x] = ret_arr[x]/vol_arr[x]
-    except ValueError:
-        pass
-
-    max_sr_ret = ret_arr[sharpe_arr.argmax()]
-    max_sr_vol = vol_arr[sharpe_arr.argmax()]
-
-    efficient_frontier = go.Figure(go.Scatter(
-        x=vol_arr,
-        y=ret_arr,
-        marker=dict(
-            size=5,
-            color=sharpe_arr,
-            colorbar=dict(
-                title="Colorbar"
-            ),
-            colorscale="Viridis"
-        ),
-        mode="markers",
-        name="Portfolios (6000)"))
-
-    efficient_frontier.add_trace(go.Scatter(
-        x=[max_sr_vol],
-        y=[max_sr_ret],
-        marker={'color':'red'},
-        mode='markers',
-        name='Efficient Portfolio'
-    ))
-
-    efficient_frontier.update_layout(legend=dict(
-        yanchor="top",
-        y=1.2,
-        xanchor="left",
-        x=0.01
-    ))
-
-    children = '''
-                Yosharpe_arrur max sharpe ratio portfolio has a return of {}, with a volatility of {}
-                '''.format(max_sr_ret, max_sr_vol)
-
     if 'load-portfolio' in changed_id:
-        return efficient_frontier, children
+        dfs = {}
+        for stock, _ in ALL_STOCKS.items():
+            dfs[stock] = yf.Ticker(stock).history(period="2y")
+            dfs[stock]['Returns'] = dfs[stock].Close.pct_change()
+            dfs[stock] = dfs[stock].iloc[1:]
+            dfs[stock].reset_index(inplace=True)
+
+        date_min = max([dfs[stock].Date.min() for stock in dfs])
+        for df in dfs:
+            dfs[df] = dfs[df][dfs[df].Date >= date_min]
+            dfs[df].reset_index(inplace=True)
+
+
+        full_returns = pd.concat([dfs[df].Returns for df in dfs], axis=1)
+        full_returns.columns = [df for df in dfs]
+
+        full_close = pd.concat([dfs[df].Close for df in dfs], axis=1)
+        full_close.columns = [df for df in dfs]
+        log_ret = np.log(full_close/full_close.shift(1))
+
+        np.random.seed(42)
+        num_ports = 6000
+        all_weights = np.zeros((num_ports, len(full_close.columns)))
+        ret_arr = np.zeros(num_ports)
+        vol_arr = np.zeros(num_ports)
+        sharpe_arr = np.zeros(num_ports)
+
+        try:
+            for x in range(num_ports):
+                # Weights
+                weights = np.array(np.random.random(len(ALL_STOCKS))) # Problem here
+                weights = weights/np.sum(weights)
+
+                # Save weights
+                all_weights[x,:] = weights
+
+                # Expected return
+                ret_arr[x] = np.sum( (log_ret.mean() * weights * 252))
+
+                # Expected volatility
+                vol_arr[x] = np.sqrt(np.dot(weights.T, np.dot(log_ret.cov()*252, weights)))
+
+                # Sharpe Ratio
+                sharpe_arr[x] = ret_arr[x]/vol_arr[x]
+        except ValueError:
+            pass
+
+        max_sr_ret = ret_arr[sharpe_arr.argmax()]
+        max_sr_vol = vol_arr[sharpe_arr.argmax()]
+
+        efficient_frontier = go.Figure(go.Scatter(
+            x=vol_arr,
+            y=ret_arr,
+            marker=dict(
+                size=5,
+                color=sharpe_arr,
+                colorbar=dict(
+                    title="Colorbar"
+                ),
+                colorscale="Viridis"
+            ),
+            mode="markers",
+            name="Portfolios (6000)"))
+
+        efficient_frontier.add_trace(go.Scatter(
+            x=[max_sr_vol],
+            y=[max_sr_ret],
+            marker={'color':'red'},
+            mode='markers',
+            name='Efficient Portfolio'
+        ))
+
+        efficient_frontier.update_layout(legend=dict(
+            yanchor="top",
+            y=1.2,
+            xanchor="left",
+            x=0.01
+        ))
+
+        children = '''
+                    Yosharpe_arrur max sharpe ratio portfolio has a return of {}, with a volatility of {}
+                    '''.format(max_sr_ret, max_sr_vol)
+
+        data = pd.DataFrame(
+            {
+                'Stock': [stock for _, stock in ALL_STOCKS.items()],
+                'Weight': list(all_weights[sharpe_arr.argmax()])
+            })
+
+        return efficient_frontier, children, data.to_dict('records')
     else:
-        return go.Figure(), ''
+        return go.Figure(), '', []
 
 @app.callback(
     Output('min-var-portfolio', 'children'),
+    Output('weights-min-var', 'data'),
     [Input('submit-investment', 'n_clicks')],
     [State('investment', 'value')]
 )
 def min_var_portfolio(n_clicks, investment):
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
-    dfs = {}
-    for stock, _ in ALL_STOCKS.items():
-        dfs[stock] = yf.Ticker(stock).history(period="2y")
-        dfs[stock]['Returns'] = dfs[stock].Close.pct_change()
-        dfs[stock] = dfs[stock].iloc[1:]
-        dfs[stock].reset_index(inplace=True)
-
-    date_min = max([dfs[stock].Date.min() for stock in dfs])
-    for df in dfs:
-        dfs[df] = dfs[df][dfs[df].Date >= date_min]
-        dfs[df].reset_index(inplace=True)
-
-
-    full_returns = pd.concat([dfs[df].Returns for df in dfs], axis=1)
-    full_returns.columns = [df for df in dfs]
-
-    full_close = pd.concat([dfs[df].Close for df in dfs], axis=1)
-    full_close.columns = [df for df in dfs]
-    log_ret = np.log(full_close/full_close.shift(1))
-
-    np.random.seed(42)
-    num_ports = 6000
-    all_weights = np.zeros((num_ports, len(full_close.columns)))
-    ret_arr = np.zeros(num_ports)
-    vol_arr = np.zeros(num_ports)
-    var = np.zeros(num_ports)
-    mean_investment = np.zeros(num_ports)
-    stdev_investment = np.zeros(num_ports)
-    cutoff = np.zeros(num_ports)
-
-    initial_investment = investment
-
-    try:
-        for x in range(num_ports):
-            # Weights
-            weights = np.array(np.random.random(len(ALL_STOCKS))) # Problem here
-            weights = weights/np.sum(weights)
-
-            # Save weights
-            all_weights[x,:] = weights
-
-            # Expected return
-            ret_arr[x] = np.sum( (log_ret.mean() * weights * 252))
-
-            # Expected volatility
-            vol_arr[x] = np.sqrt(np.dot(weights.T, np.dot(log_ret.cov()*252, weights)))
-
-            # Calculate mean of investment
-            mean_investment[x] = (1+ret_arr[x]) * initial_investment
-
-            # Calculate standard deviation of investmnet
-            stdev_investment[x] = initial_investment * vol_arr[x]
-
-            # VaR 99%
-            cutoff[x] = norm.ppf(1-0.99, mean_investment[x], stdev_investment[x])
-            var[x] = initial_investment - cutoff
-
-    except (ValueError, TypeError):
-        pass
-
-    min_var_ret = ret_arr[var.argmin()]
-    min_var_vol = vol_arr[var.argmin()]
-    min_var = var[var.argmin()]
-
     if 'submit-investment' in changed_id:
+        dfs = {}
+        for stock, _ in ALL_STOCKS.items():
+            dfs[stock] = yf.Ticker(stock).history(period="2y")
+            dfs[stock]['Returns'] = dfs[stock].Close.pct_change()
+            dfs[stock] = dfs[stock].iloc[1:]
+            dfs[stock].reset_index(inplace=True)
+
+        date_min = max([dfs[stock].Date.min() for stock in dfs])
+        for df in dfs:
+            dfs[df] = dfs[df][dfs[df].Date >= date_min]
+            dfs[df].reset_index(inplace=True)
+
+
+        full_returns = pd.concat([dfs[df].Returns for df in dfs], axis=1)
+        full_returns.columns = [df for df in dfs]
+
+        full_close = pd.concat([dfs[df].Close for df in dfs], axis=1)
+        full_close.columns = [df for df in dfs]
+        log_ret = np.log(full_close/full_close.shift(1))
+        cov_matrix = log_ret.cov()
+
+        np.random.seed(42)
+        num_ports = 6000
+        all_weights = np.zeros((num_ports, len(full_close.columns)))
+        avg_rets = np.zeros(num_ports)
+        port_mean = np.zeros(num_ports)
+        port_stdev = np.zeros(num_ports)
+        var = np.zeros(num_ports)
+        mean_investment = np.zeros(num_ports)
+        stdev_investment = np.zeros(num_ports)
+        cutoff = np.zeros(num_ports)
+
+        initial_investment = investment
+
+        try:
+            for x in range(num_ports):
+                # Weights
+                weights = np.array(np.random.random(len(ALL_STOCKS))) # Problem here
+                weights = weights/np.sum(weights)
+
+                # Save weights
+                all_weights[x,:] = weights
+
+                # Calculate mean returns for portfolio overall,
+                port_mean[x] = log_ret.mean().dot(weights)
+
+                # Calculate portfolio standard deviation
+                port_stdev[x] = np.sqrt(weights.T.dot(cov_matrix).dot(weights))
+
+                # Calculate mean of investment
+                mean_investment[x] = (1+port_mean[x]) * initial_investment
+
+                # Calculate standard deviation of investmnet
+                stdev_investment[x] = initial_investment * port_stdev[x]
+
+                # VaR 99%
+                cutoff[x] = norm.ppf(1-0.99, mean_investment[x], stdev_investment[x])
+                var[x] = initial_investment - cutoff[x]
+        except (ValueError, TypeError):
+            pass
+
+        min_var_ret = port_mean[var.argmin()]
+        min_var_vol = port_stdev[var.argmin()]
+        min_var = var[var.argmin()]
+
+        data = pd.DataFrame(
+            {
+                'Stock': [stock for _, stock in ALL_STOCKS.items()],
+                'Weight': list(all_weights[var.argmin()])
+            })
+
         return '''
         Your min VaR portfolio has a return of {}, with a volatility of {}.
-        Here we are saying with 95% confidence that our portfolio of 1M USD will not exceed losses greater than {} USD over a one day period.
-        '''.format(min_var_ret, min_var_vol, min_var)
+        Here we are saying with 95% confidence that our portfolio of {} USD will not exceed losses greater than {} USD over a one day period.
+        '''.format(min_var_ret, min_var_vol, investment, min_var), data.to_dict('records')
     else:
-        return ''
+        return '', []
 
 
 if __name__ == '__main__':
