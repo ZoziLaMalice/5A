@@ -26,12 +26,46 @@ def bbands(price, window_size=10, num_of_std=5):
     return rolling_mean, upper_band, lower_band
 
 
+def trading(df, portfolio, buy_, sell_):
+    buys = []
+    sells = []
+    portfolio = portfolio
+    evolution = df.loc[df.index[0], 'Log_Returns']
+    buy = False
+
+    for i in range(df.index[1], len(df)):
+        evolution += df.loc[i, 'Log_Returns']
+        if evolution  <= -buy_ and not buy:
+            buys.append([df.loc[i, 'Close'], df.loc[i, 'Datetime']])
+            portfolio -= df.loc[i, 'Close']
+            evolution = 0
+            buy = True
+
+        elif evolution <= -sell_ and buy:
+            sells.append([df.loc[i, 'Close'], df.loc[i, 'Datetime']])
+            portfolio += df.loc[i, 'Close']
+            evolution = 0
+            buy = False
+
+        elif evolution >= sell_ and buy:
+            sells.append([df.loc[i, 'Close'], df.loc[i, 'Datetime']])
+            evolution = 0
+            portfolio += df.loc[i, 'Close']
+            buy = False
+
+    return portfolio, buys, sells
+
+buys = {}
+sells = {}
+
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
 global ALL_STOCKS
 ALL_STOCKS = {'^GSPC': 'S&P500'}
+
+weights_max_sharpe = []
 
 with open('sp500_sectors.csv', newline='') as f:
     reader = csv.reader(f)
@@ -164,6 +198,9 @@ covariance = go.Figure()
 # Efficient Frontier
 efficient_frontier = go.Figure()
 
+# Paulo Portfolio
+paulo_portfolio = go.Figure()
+
 app.layout = html.Div([
         html.Div([
             html.H1('The S&P500 during the COVID crisis'),
@@ -210,6 +247,10 @@ app.layout = html.Div([
         ], style={'display': 'table'}),
 
         html.Hr(),
+
+        html.Div([
+            html.H5('Your portfolio:'),
+        ]),
 
         html.Div([
             dash_table.DataTable(
@@ -265,6 +306,14 @@ app.layout = html.Div([
                         options=[{'label': item, 'value': key} for key, item in ALL_STOCKS.items()],
                     ),
                 ], style={'padding-top': 10}),
+
+                html.Div([
+                    html.Button(id='var-normal', n_clicks=0, children='VaR Returns',
+                    style={'margin': 0, 'position': 'absolute', 'left': '40%'}),
+
+                    html.Button(id='var-log', n_clicks=0, children='VaR Log Returns',
+                    style={'margin': 0, 'position': 'absolute', 'left': '50%'}),
+                ], style={'padding': 40}),
 
                 html.Div([
                     dcc.Graph(
@@ -354,6 +403,32 @@ app.layout = html.Div([
                 ], style={'width': '30%', 'padding': 25, 'left': '33.5%', 'position': 'relative'}),
 
                 html.Div(id='min-var-portfolio', children=[
+
+                ], style={'padding-top': 15, 'font-size': 20, 'text-align': 'center'}),
+
+                html.Hr(),
+
+                html.Div([
+                    html.Div(dcc.Input(id='paulo', type='number'), style={'margin': 0, 'position': 'absolute', 'left': '30%', 'display': 'table-cell'}),
+                    html.Button(id='submit-paulo', n_clicks=0, children='Generate Paulo Portfolio',
+                    style={'margin': 0, 'position': 'absolute', 'left': '50%', 'display': 'table-cell'})
+                ], style={'padding': 40, 'display': 'table'}),
+
+                html.Div(id='drop-paulo', children=[
+                    dcc.Dropdown(
+                        id='paulo-stocks',
+                        options=[{'label': item, 'value': key} for key, item in ALL_STOCKS.items()],
+                    ),
+                ], style={'padding-top': 10}),
+
+                html.Div([
+                    dcc.Graph(
+                        id='paulo-portfolio',
+                        figure=paulo_portfolio
+                    )
+                ]),
+
+                html.Div(id='paulo-portfolio-text', children=[
 
                 ], style={'padding-top': 15, 'font-size': 20, 'text-align': 'center'}),
 
@@ -690,7 +765,7 @@ def update_output_div(stock, opt):
     )
 
     fig3.add_trace(
-        go.Bar(x=df.Date, y=(df.log_ret * 100), name="Log Returns", marker_color=df.log_Color, yaxis="y1"),
+        go.Bar(x=df.Date, y=(df.log_ret * 100), name="Log Returns", marker_color=df.log_Color, yaxis="y1", visible=False),
         secondary_y=True
     )
 
@@ -818,9 +893,13 @@ def set_portfolio_stocks_value(available_options):
 
 @app.callback(
     Output('VaR-HS', 'figure'),
-    [Input('portfolio-stocks', 'value')],
+    Output('var-normal', 'style'),
+    Output('var-log', 'style'),
+    [Input('portfolio-stocks', 'value'),
+    Input('var-normal', 'n_clicks'),
+    Input('var-log', 'n_clicks')],
     State('portfolio-stocks', 'options'))
-def update_VaR_chart(stock, opt):
+def update_VaR_chart(stock, btn1, btn2, opt):
     the_label = [x['label'] for x in opt if x['value'] == stock]
 
     df = yf.Ticker(stock).history(period="2y")
@@ -828,50 +907,101 @@ def update_VaR_chart(stock, opt):
     df = df.iloc[1:]
     df.reset_index(inplace=True)
 
-    var = ff.create_distplot([df.Returns], ['Historical Simulation'], bin_size=.002, show_rug=False, colors=['#1669e9', '#e4ed1e'])
+    log_ret = np.log(df.Close/df.Close.shift(1)).dropna()
 
-    var.add_trace(go.Scatter(
-        mode= "markers+text",
-        text="VaR",
-        name="Value at Risk 95%",
-        x=[df.Returns.sort_values(ascending=True).quantile(0.05)],
-        y=[0],
-        marker={"size": 20, 'color': "#ff9b00"},
-        textposition= 'bottom center'
-    ))
+    changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
+    if 'var-normal' in changed_id:
+        var = ff.create_distplot([df.Returns], ['Historical Simulation'], bin_size=.002, show_rug=False, colors=['#1669e9', '#e4ed1e'])
 
-    var.add_trace(go.Scatter(
-        mode= "markers+text",
-        text="VaR",
-        name="Value at Risk 99%",
-        x=[df.Returns.sort_values(ascending=True).quantile(0.01)],
-        y=[0],
-        marker={"size": 20, 'color': "#ff0000"},
-        textposition= 'bottom center'
-    ))
+        var.add_trace(go.Scatter(
+            mode= "markers+text",
+            text="VaR",
+            name="Value at Risk 95%",
+            x=[df.Returns.sort_values(ascending=True).quantile(0.05)],
+            y=[0],
+            marker={"size": 20, 'color': "#ff9b00"},
+            textposition= 'bottom center'
+        ))
 
-    var.update_layout(
-        width=1400,
-        height=600,
-    )
+        var.add_trace(go.Scatter(
+            mode= "markers+text",
+            text="VaR",
+            name="Value at Risk 99%",
+            x=[df.Returns.sort_values(ascending=True).quantile(0.01)],
+            y=[0],
+            marker={"size": 20, 'color': "#ff0000"},
+            textposition= 'bottom center',
+            visible=False
+        ))
 
-    var.update_layout(
-        updatemenus=[dict(
-            active=0,
-            type='buttons',
-            direction='down',
-            buttons=list(
-                [dict(label = 'VaR 95%',
-                    method = 'update',
-                    args = [{'visible': [True, True, True, False]}]),
-                dict(label = 'VaR 99%',
-                    method = 'update',
-                    args = [{'visible': [True, True, False, True]}]),
-                ])
-            )
-        ])
+        var.update_layout(
+            width=1400,
+            height=600,
+        )
 
-    return var
+        var.update_layout(
+            updatemenus=[dict(
+                active=0,
+                type='buttons',
+                direction='down',
+                buttons=list(
+                    [dict(label = 'VaR 95%',
+                        method = 'update',
+                        args = [{'visible': [True, True, True, False]}]),
+                    dict(label = 'VaR 99%',
+                        method = 'update',
+                        args = [{'visible': [True, True, False, True]}]),
+                    ])
+                )
+            ])
+        return var, {'margin': 0, 'position': 'absolute', 'left': '41%', 'background-color': 'rgba(150, 220, 240, 0.5'}, {'margin': 0, 'position': 'absolute', 'left': '51%'}
+    elif 'var-log' in changed_id:
+        var = ff.create_distplot([log_ret], ['Historical Simulation'], bin_size=.002, show_rug=False, colors=['#1669e9', '#e4ed1e'])
+
+        var.add_trace(go.Scatter(
+            mode= "markers+text",
+            text="VaR",
+            name="Value at Risk 95%",
+            x=[log_ret.sort_values(ascending=True).quantile(0.05)],
+            y=[0],
+            marker={"size": 20, 'color': "#ff9b00"},
+            textposition= 'bottom center'
+        ))
+
+        var.add_trace(go.Scatter(
+            mode= "markers+text",
+            text="VaR",
+            name="Value at Risk 99%",
+            x=[log_ret.sort_values(ascending=True).quantile(0.01)],
+            y=[0],
+            marker={"size": 20, 'color': "#ff0000"},
+            textposition= 'bottom center',
+            visible=False
+        ))
+
+        var.update_layout(
+            width=1400,
+            height=600,
+        )
+
+        var.update_layout(
+            updatemenus=[dict(
+                active=0,
+                type='buttons',
+                direction='down',
+                buttons=list(
+                    [dict(label = 'VaR 95%',
+                        method = 'update',
+                        args = [{'visible': [True, True, True, False]}]),
+                    dict(label = 'VaR 99%',
+                        method = 'update',
+                        args = [{'visible': [True, True, False, True]}]),
+                    ])
+                )
+            ])
+        return var, {'margin': 0, 'position': 'absolute', 'left': '41%'}, {'margin': 0, 'position': 'absolute', 'left': '51%', 'background-color': 'rgba(150, 220, 240, 0.5)'}
+    else:
+        return go.Figure(), {'margin': 0, 'position': 'absolute', 'left': '41%'}, {'margin': 0, 'position': 'absolute', 'left': '51%'}
 
 @app.callback(
     Output('equal-weighted-portfolio', 'children'),
@@ -991,6 +1121,9 @@ def load_portfolio(n_clicks):
         max_sr_ret = ret_arr[sharpe_arr.argmax()]
         max_sr_vol = vol_arr[sharpe_arr.argmax()]
 
+        global weights_max_sharpe
+        weights_max_sharpe = list(all_weights[sharpe_arr.argmax()])
+
         efficient_frontier = go.Figure(go.Scatter(
             x=vol_arr,
             y=ret_arr,
@@ -1013,15 +1146,18 @@ def load_portfolio(n_clicks):
             name='Efficient Portfolio'
         ))
 
-        efficient_frontier.update_layout(legend=dict(
-            yanchor="top",
-            y=1.2,
-            xanchor="left",
-            x=0.01
+        efficient_frontier.update_layout(
+            height=600,
+            width=1400,
+            legend=dict(
+                yanchor="top",
+                y=1.2,
+                xanchor="left",
+                x=0.01
         ))
 
         children = '''
-                    Yosharpe_arrur max sharpe ratio portfolio has a return of {}, with a volatility of {}
+                    Your max sharpe ratio portfolio has a return of {}, with a volatility of {}
                     '''.format(max_sr_ret, max_sr_vol)
 
         data = pd.DataFrame(
@@ -1121,6 +1257,100 @@ def min_var_portfolio(n_clicks, investment):
     else:
         return '', []
 
+
+@app.callback(
+    Output('paulo-stocks', 'value'),
+    [Input('paulo-stocks', 'options')])
+def set_paulo_stocks_value(available_options):
+    try:
+        return available_options[0]['value']
+    except TypeError:
+        pass
+
+
+@app.callback(
+    Output('paulo-portfolio-text', 'children'),
+    Output('drop-paulo', 'children'),
+    [Input('submit-paulo', 'n_clicks')],
+    [State('paulo', 'value')]
+)
+def paulo_investment(n_clicks, investment):
+    changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
+    if 'submit-paulo' in changed_id:
+        dfs = {}
+        for stock, _ in ALL_STOCKS.items():
+            dfs[stock] = yf.Ticker(stock).history(period="2y", interval='60m')
+            dfs[stock].reset_index(inplace=True)
+
+        date_min = max([dfs[stock].Datetime.min() for stock in dfs])
+        for df in dfs:
+            dfs[df] = dfs[df][dfs[df].Datetime >= date_min]
+            dfs[df].reset_index(inplace=True)
+            dfs[df] = dfs[df][['Datetime', 'Close']]
+            dfs[df]['Log_Returns'] = np.log(dfs[df].Close/dfs[df].Close.shift(1))
+            dfs[df] = dfs[df].dropna()
+
+        stock_inv = [investment * i for i in weights_max_sharpe]
+        result = 0
+
+        global buys, sells
+
+        for (df, inv) in zip(dfs, stock_inv):
+            r, b, s = trading(dfs[df], inv, 0.04, 0.01)
+            result += r
+            buys[df] = b
+            sells[df] = s
+
+        children = html.Div([
+                    dcc.Dropdown(
+                        id='paulo-stocks',
+                        options=[{'label': label, 'value': value} for value, label in ALL_STOCKS.items()],
+                    ),
+                ])
+
+        return f'Your result is {result}', children
+    else:
+        return '', html.Div([' '])
+
+@app.callback(
+    Output('paulo-portfolio', 'figure'),
+    [Input('paulo-stocks', 'value')],
+    [State("paulo-stocks","options")]
+)
+def update_paulo_figure(stock, opt):
+
+    df = yf.Ticker(stock).history(period="2y", interval='60m')
+    df['Returns'] = df.Close.pct_change()
+    df = df.iloc[1:]
+    df.reset_index(inplace=True)
+
+    fig = go.Figure()
+
+    fig.add_trace(
+        go.Scatter(
+            x = df.Datetime,
+            y = df.Close,
+            name = stock,
+        )
+    )
+
+    fig.add_trace(go.Scatter(
+        mode= "markers",
+        marker_symbol="triangle-up",
+        x=pd.Series([buys[stock][i][1] for i in range(len(buys[stock]))]),
+        y=pd.Series([buys[stock][i][0] for i in range(len(buys[stock]))]),
+        marker={"size": 8, 'color': "#1df344"},
+    ))
+
+    fig.add_trace(go.Scatter(
+        mode= "markers",
+        marker_symbol="triangle-down",
+        x=pd.Series([sells[stock][i][1] for i in range(len(sells[stock]))]),
+        y=pd.Series([sells[stock][i][0] for i in range(len(sells[stock]))]),
+        marker={"size": 8, 'color': "#f10f0f"},
+    ))
+
+    return fig
 
 if __name__ == '__main__':
     app.run_server(debug=True)
