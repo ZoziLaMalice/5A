@@ -189,6 +189,9 @@ third = go.Figure()
 # Fourth Chart
 fourth = go.Figure()
 
+# Regression
+regression = go.Figure()
+
 # Heatmap
 heatmap = go.Figure()
 
@@ -297,8 +300,8 @@ app.layout = html.Div([
             dcc.Tab(label='Stocks Stats', id='tab-2',  children=[
                 html.Div([
                     html.Button(id='load-stocks', n_clicks=0, children='Load Stocks',
-                    style={'margin': 0, 'position': 'absolute', 'left': '45%'})
-                ], style={'padding': 40}),
+                    style={'display': 'table-cell'})
+                ], style={'padding': 40, 'margin-left': 'auto', 'margin-right': 'auto', 'display': 'table'}),
 
                 html.Div(id='drop-portfolio', children=[
                     dcc.Dropdown(
@@ -308,12 +311,24 @@ app.layout = html.Div([
                 ], style={'padding-top': 10}),
 
                 html.Div([
-                    html.Button(id='var-normal', n_clicks=0, children='VaR Returns',
-                    style={'margin': 0, 'position': 'absolute', 'left': '40%'}),
+                    dcc.Graph(
+                        id='regression',
+                        figure=regression
+                    )
+                ]),
 
-                    html.Button(id='var-log', n_clicks=0, children='VaR Log Returns',
-                    style={'margin': 0, 'position': 'absolute', 'left': '50%'}),
-                ], style={'padding': 40}),
+                html.Hr(),
+
+                html.Div([
+                    html.Div([
+                        html.Button(id='var-normal', n_clicks=0, children='VaR Returns',
+                        ),
+                    ], style={'display': 'table-cell'}),
+                    html.Div([
+                        html.Button(id='var-log', n_clicks=0, children='VaR Log Returns',
+                        ),
+                    ], style={'display': 'table-cell', 'padding-left': 20}),
+                ], style={'display': 'table', 'margin-left': 'auto', 'margin-right': 'auto'}),
 
                 html.Div([
                     dcc.Graph(
@@ -345,8 +360,8 @@ app.layout = html.Div([
 
                 html.Div([
                     html.Button(id='equal-weighted', n_clicks=0, children='Generate Equal Weighted Portfolio',
-                    style={'margin': 0, 'position': 'absolute', 'left': '40%'})
-                ], style={'padding': 40}),
+                    style={'display':'table-cell'})
+                ], style={'padding': 40, 'margin-left': 'auto', 'margin-right': 'auto', 'display': 'table'}),
 
                 html.Div([
                     dash_table.DataTable(
@@ -364,8 +379,8 @@ app.layout = html.Div([
 
                 html.Div([
                     html.Button(id='load-portfolio', n_clicks=0, children='Generate Efficient Frontier',
-                    style={'margin': 0, 'position': 'absolute', 'left': '41.5%'})
-                ], style={'padding': 40}),
+                    style={'display': 'table-cell'})
+                ], style={'padding': 40, 'margin-left': 'auto', 'margin-right': 'auto', 'display': 'table'}),
 
                 html.Div([
                     dash_table.DataTable(
@@ -389,10 +404,10 @@ app.layout = html.Div([
                 html.Hr(),
 
                 html.Div([
-                    html.Div(dcc.Input(id='investment', type='number'), style={'margin': 0, 'position': 'absolute', 'left': '30%', 'display': 'table-cell'}),
+                    html.Div(dcc.Input(id='investment', type='number'), style={'display': 'table-cell', 'padding-right': 20}),
                     html.Button(id='submit-investment', n_clicks=0, children='Generate Min VaR Portfolio',
-                    style={'margin': 0, 'position': 'absolute', 'left': '50%', 'display': 'table-cell'})
-                ], style={'padding': 40, 'display': 'table'}),
+                    style={'display': 'table-cell'})
+                ], style={'margin-left': 'auto', 'margin-right': 'auto', 'display': 'table'}),
 
                 html.Div([
                     dash_table.DataTable(
@@ -409,10 +424,10 @@ app.layout = html.Div([
                 html.Hr(),
 
                 html.Div([
-                    html.Div(dcc.Input(id='paulo', type='number'), style={'margin': 0, 'position': 'absolute', 'left': '30%', 'display': 'table-cell'}),
-                    html.Button(id='submit-paulo', n_clicks=0, children='Generate Paulo Portfolio',
-                    style={'margin': 0, 'position': 'absolute', 'left': '50%', 'display': 'table-cell'})
-                ], style={'padding': 40, 'display': 'table'}),
+                    html.Div(dcc.Input(id='paulo', type='number'), style={'display': 'table-cell', 'padding-right': 20}),
+                    html.Button(id='submit-paulo', n_clicks=0, children='Paulo Investment',
+                    style={'display': 'table-cell'})
+                ], style={'margin-left': 'auto', 'margin-right': 'auto', 'display': 'table'}),
 
                 html.Div(id='drop-paulo', children=[
                     dcc.Dropdown(
@@ -433,6 +448,31 @@ app.layout = html.Div([
                 ], style={'padding-top': 15, 'font-size': 20, 'text-align': 'center'}),
 
                 html.Hr(),
+
+            ]),
+
+            dcc.Tab(label='Stats on Efficient Portfolio', id='tab-4', children=[
+
+                html.Div([
+                    html.Button(id='load-stocks-2', n_clicks=0, children='Load Stocks',
+                    style={'display': 'table-cell'})
+                ], style={'padding': 40, 'margin-left': 'auto', 'margin-right': 'auto', 'display': 'table'}),
+
+                html.Div([
+                    dcc.Graph(
+                        id='regression-portfolio',
+                        figure=go.Figure()
+                    )
+                ]),
+
+                html.Hr(),
+
+                html.Div([
+                    dcc.Graph(
+                        id='monte-carlo-portfolio',
+                        figure=go.Figure()
+                    )
+                ]),
 
             ]),
         ], style={'padding-top': 30}),
@@ -862,20 +902,22 @@ def load_stocks(n_clicks):
             ])
 
     heatmap = ff.create_annotated_heatmap(
-        z=correl.values[::-1],
+        z=correl.values[::-1].round(2),
         x=[stock for stock in dfs],
         y=[stock for stock in dfs][::-1],
         xgap=10,
-        ygap=10
+        ygap=10,
     )
+    heatmap.update_layout(title_text='Correlation Matrix')
 
     covariance = ff.create_annotated_heatmap(
-        z=cov.values[::-1],
+        z=cov.values[::-1].round(6),
         x=[stock for stock in dfs],
         y=[stock for stock in dfs][::-1],
         xgap=10,
-        ygap=10
+        ygap=10,
     )
+    covariance.update_layout(title_text='Variance - Covariance Matrix')
 
     if 'load-stocks' in changed_id:
         return children, heatmap, covariance
@@ -895,6 +937,7 @@ def set_portfolio_stocks_value(available_options):
     Output('VaR-HS', 'figure'),
     Output('var-normal', 'style'),
     Output('var-log', 'style'),
+    Output('regression', 'figure'),
     [Input('portfolio-stocks', 'value'),
     Input('var-normal', 'n_clicks'),
     Input('var-log', 'n_clicks')],
@@ -907,7 +950,37 @@ def update_VaR_chart(stock, btn1, btn2, opt):
     df = df.iloc[1:]
     df.reset_index(inplace=True)
 
+    date_min = df.Date.min()
+
+    market_date_min = yf.Ticker('^GSPC').history(period="2y")
+    market_date_min['Returns'] = market_date_min.Close.pct_change()
+    market_date_min = market_date_min.iloc[1:]
+    market_date_min.reset_index(inplace=True)
+    market_date_min = market_date_min[market_date_min.Date >= date_min]
+    market_date_min.reset_index(inplace=True)
+
     log_ret = np.log(df.Close/df.Close.shift(1)).dropna()
+
+    slope, intercept, r, p, std_err = linregress(df.Returns, market_date_min.Returns)
+
+    x = np.linspace(np.amin(market_date_min.Returns), np.amax(df.Returns))
+    y = slope * x + intercept
+
+    regression = go.Figure(go.Scatter(
+        x=market_date_min.Returns,
+        y=df.Returns,
+        mode="markers",
+        marker={'size': 5, 'color': '#468de2'},
+        name="Returns"
+    ))
+
+    regression.add_trace(go.Scatter(
+        x=x,
+        y=y,
+        mode="lines",
+        marker={'color': '#e34029'},
+        name="Linear Regression"
+    ))
 
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
     if 'var-normal' in changed_id:
@@ -954,7 +1027,8 @@ def update_VaR_chart(stock, btn1, btn2, opt):
                     ])
                 )
             ])
-        return var, {'margin': 0, 'position': 'absolute', 'left': '41%', 'background-color': 'rgba(150, 220, 240, 0.5'}, {'margin': 0, 'position': 'absolute', 'left': '51%'}
+
+        return var, {'display': 'table-cell', 'margin-left': 'auto', 'margin-right': 'auto', 'background-color': 'rgba(150, 220, 240, 0.5'}, {'display': 'table-cell', 'margin-left': 'auto', 'margin-right': 'auto'}, regression
     elif 'var-log' in changed_id:
         var = ff.create_distplot([log_ret], ['Historical Simulation'], bin_size=.002, show_rug=False, colors=['#1669e9', '#e4ed1e'])
 
@@ -999,9 +1073,9 @@ def update_VaR_chart(stock, btn1, btn2, opt):
                     ])
                 )
             ])
-        return var, {'margin': 0, 'position': 'absolute', 'left': '41%'}, {'margin': 0, 'position': 'absolute', 'left': '51%', 'background-color': 'rgba(150, 220, 240, 0.5)'}
+        return var, {'display': 'table-cell', 'margin-left': 'auto', 'margin-right': 'auto'}, {'display': 'table-cell', 'margin-left': 'auto', 'margin-right': 'auto', 'background-color': 'rgba(150, 220, 240, 0.5)'}, regression
     else:
-        return go.Figure(), {'margin': 0, 'position': 'absolute', 'left': '41%'}, {'margin': 0, 'position': 'absolute', 'left': '51%'}
+        return go.Figure(), {'display': 'table-cell', 'margin-left': 'auto', 'margin-right': 'auto'}, {'display': 'table-cell', 'margin-left': 'auto', 'margin-right': 'auto'}, regression
 
 @app.callback(
     Output('equal-weighted-portfolio', 'children'),
@@ -1056,8 +1130,8 @@ def equal_weighted(n_clicks):
             })
 
         return '''
-        Your equal weighted portfolio has a return of {}, with a volatility of {}
-        '''.format(ret_arr, vol_arr), data.to_dict('records')
+        Your equal weighted portfolio has a return of {0:.2f}%, with a volatility of {1:.2f}%
+        '''.format(ret_arr*100, vol_arr*100), data.to_dict('records')
     else:
         return '', []
 
@@ -1157,8 +1231,8 @@ def load_portfolio(n_clicks):
         ))
 
         children = '''
-                    Your max sharpe ratio portfolio has a return of {}, with a volatility of {}
-                    '''.format(max_sr_ret, max_sr_vol)
+                    Your max sharpe ratio portfolio has a return of {0:.2f}%, with a volatility of {1:.2f}%
+                    '''.format(max_sr_ret*100, max_sr_vol*100)
 
         data = pd.DataFrame(
             {
@@ -1251,9 +1325,9 @@ def min_var_portfolio(n_clicks, investment):
             })
 
         return '''
-        Your min VaR portfolio has a return of {}, with a volatility of {}.
-        Here we are saying with 95% confidence that our portfolio of {} USD will not exceed losses greater than {} USD over a one day period.
-        '''.format(min_var_ret, min_var_vol, investment, min_var), data.to_dict('records')
+        Your min VaR portfolio has a return of {0:.2f}%, with a volatility of {1:.2f}%.
+        Here we are saying with 95% confidence that our portfolio of {2:d} USD will not exceed losses greater than {3:.2f} USD over a one day period.
+        '''.format(min_var_ret*100, min_var_vol*100, investment, min_var), data.to_dict('records')
     else:
         return '', []
 
@@ -1340,6 +1414,7 @@ def update_paulo_figure(stock, opt):
         x=pd.Series([buys[stock][i][1] for i in range(len(buys[stock]))]),
         y=pd.Series([buys[stock][i][0] for i in range(len(buys[stock]))]),
         marker={"size": 8, 'color': "#1df344"},
+        name="Buys"
     ))
 
     fig.add_trace(go.Scatter(
@@ -1348,9 +1423,102 @@ def update_paulo_figure(stock, opt):
         x=pd.Series([sells[stock][i][1] for i in range(len(sells[stock]))]),
         y=pd.Series([sells[stock][i][0] for i in range(len(sells[stock]))]),
         marker={"size": 8, 'color': "#f10f0f"},
+        name='Sells'
     ))
 
     return fig
+
+
+@app.callback(
+    Output('regression-portfolio', 'figure'),
+    Output('monte-carlo-portfolio', 'figure'),
+    [Input('load-stocks-2', 'n_clicks')]
+)
+def load_stocks_2(n_clicks):
+    changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
+    if 'load-stocks-2' in changed_id:
+        dfs = {}
+        for stock, _ in ALL_STOCKS.items():
+            dfs[stock] = yf.Ticker(stock).history(period="2y")
+            dfs[stock]['Returns'] = dfs[stock].Close.pct_change()
+            dfs[stock] = dfs[stock].iloc[1:]
+            dfs[stock].reset_index(inplace=True)
+
+        date_min = max([dfs[stock].Date.min() for stock in dfs])
+        for df in dfs:
+            dfs[df] = dfs[df][dfs[df].Date >= date_min]
+            dfs[df].reset_index(inplace=True)
+
+        market_date_min = yf.Ticker('^GSPC').history(period="2y")
+        market_date_min['Returns'] = market_date_min.Close.pct_change()
+        market_date_min = market_date_min.iloc[1:]
+        market_date_min.reset_index(inplace=True)
+        market_date_min = market_date_min[market_date_min.Date >= date_min]
+        market_date_min.reset_index(inplace=True)
+
+        full_returns = pd.concat([dfs[df].Returns for df in dfs], axis=1)
+        full_returns.columns = [df for df in dfs]
+
+        full_close = pd.concat([dfs[df].Close for df in dfs], axis=1)
+        full_close.columns = [df for df in dfs]
+        log_ret = np.log(full_close/full_close.shift(1))
+
+        portfolio_returns = (full_returns * weights_max_sharpe).sum(axis=1)
+        portfolio_log_returns = (log_ret * weights_max_sharpe).sum(axis=1)
+
+        slope, intercept, r, p, std_err = linregress(portfolio_returns, market_date_min.Returns)
+
+        x = np.linspace(np.amin(market_date_min.Returns), np.amax(portfolio_returns))
+        y = slope * x + intercept
+
+        regression = go.Figure(go.Scatter(
+            x=market_date_min.Returns,
+            y=portfolio_returns,
+            mode="markers",
+            marker={'size': 5, 'color': '#468de2'},
+            name="Returns"
+        ))
+
+        regression.add_trace(go.Scatter(
+            x=x,
+            y=y,
+            mode="lines",
+            marker={'color': '#e34029'},
+            name="Linear Regression"
+        ))
+        regression.update_layout(title_text='Single Index Model')
+
+        #Setting up drift and random component in relatoin to asset data
+        u = portfolio_log_returns.mean()
+        var = portfolio_log_returns.var()
+        drift = u - (0.5 * var)
+        stdev = portfolio_log_returns.std()
+
+        daily_returns = np.exp(drift + stdev * norm.ppf(np.random.rand(25, 30)))
+
+        #Takes last data point as startpoint point for simulation
+        S0 = portfolio_log_returns.iloc[-1]
+        price_list = np.zeros_like(daily_returns)
+
+        price_list[0] = S0
+
+        #Applies Monte Carlo simulation in asset
+        for t in range(1, 25):
+            price_list[t] = price_list[t - 1] * daily_returns[t]
+
+        monte_carlo = go.Figure()
+
+        for i in range(len(price_list)):
+            monte_carlo.add_trace(go.Scatter(
+                x=[i for i in range(31)],
+                y=price_list[i],
+            ))
+
+
+        return regression, monte_carlo
+    else:
+        return go.Figure(), go.Figure()
+
 
 if __name__ == '__main__':
     app.run_server(debug=True)
