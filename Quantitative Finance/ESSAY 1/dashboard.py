@@ -7,7 +7,6 @@ import dash_table
 import yfinance as yf
 import pandas as pd
 import csv
-from tqdm.notebook import tqdm
 import html5lib
 import plotly.express as px
 from datetime import datetime
@@ -18,42 +17,7 @@ import numpy as np
 import re
 from scipy.stats import linregress, norm
 
-def bbands(price, window_size=10, num_of_std=5):
-    rolling_mean = price.rolling(window=window_size).mean()
-    rolling_std  = price.rolling(window=window_size).std()
-    upper_band = rolling_mean + (rolling_std*num_of_std)
-    lower_band = rolling_mean - (rolling_std*num_of_std)
-    return rolling_mean, upper_band, lower_band
-
-
-def trading(df, portfolio, buy_, sell_):
-    buys = []
-    sells = []
-    portfolio = portfolio
-    evolution = df.loc[df.index[0], 'Log_Returns']
-    buy = False
-
-    for i in range(df.index[1], len(df)):
-        evolution += df.loc[i, 'Log_Returns']
-        if evolution  <= -buy_ and not buy:
-            buys.append([df.loc[i, 'Close'], df.loc[i, 'Datetime']])
-            portfolio -= df.loc[i, 'Close']
-            evolution = 0
-            buy = True
-
-        elif evolution <= -sell_ and buy:
-            sells.append([df.loc[i, 'Close'], df.loc[i, 'Datetime']])
-            portfolio += df.loc[i, 'Close']
-            evolution = 0
-            buy = False
-
-        elif evolution >= sell_ and buy:
-            sells.append([df.loc[i, 'Close'], df.loc[i, 'Datetime']])
-            evolution = 0
-            portfolio += df.loc[i, 'Close']
-            buy = False
-
-    return portfolio, buys, sells
+from Functions import *
 
 buys = {}
 sells = {}
@@ -67,7 +31,7 @@ ALL_STOCKS = {'^GSPC': 'S&P500'}
 
 weights_max_sharpe = []
 
-with open('sp500_sectors.csv', newline='') as f:
+with open('./ESSAY 1/sp500_sectors.csv', newline='') as f:
     reader = csv.reader(f)
     sp500_s = list(reader)
 
@@ -99,7 +63,7 @@ market = market.iloc[1:]
 market.reset_index(inplace=True)
 
 global covid
-covid = pd.read_csv('covid_USA.csv')
+covid = pd.read_csv('./ESSAY 1/covid_USA.csv')
 covid.Date = pd.to_datetime(covid.Date)
 
 stats = pd.DataFrame(
@@ -174,36 +138,7 @@ market_chart.update_layout(
     ),
 )
 
-# First Chart
-first = go.Figure()
-
-
-# Second Analysis
-second = go.Figure()
-
-
-# Third Analysis
-third = go.Figure()
-
-# Second Tab Charts
-# Fourth Chart
-fourth = go.Figure()
-
-# Regression
-regression = go.Figure()
-
-# Heatmap
-heatmap = go.Figure()
-
-# Variance CoVariance Matrix
-covariance = go.Figure()
-
-# Efficient Frontier
-efficient_frontier = go.Figure()
-
-# Paulo Portfolio
-paulo_portfolio = go.Figure()
-
+# Layout
 app.layout = html.Div([
         html.Div([
             html.H1('The S&P500 during the COVID crisis'),
@@ -269,7 +204,7 @@ app.layout = html.Div([
                     html.Div([
                         dcc.Graph(
                             id='first-graph',
-                            figure=first
+                            figure=go.Figure()
                         ),
                     ]),
                 ]),
@@ -285,14 +220,14 @@ app.layout = html.Div([
                 html.Div([
                     dcc.Graph(
                         id='second-graph',
-                        figure=second
+                        figure=go.Figure()
                     ),
                 ]),
 
                 html.Div([
                     dcc.Graph(
                         id='third-graph',
-                        figure=third
+                        figure=go.Figure()
                     ),
                 ]),
             ]),
@@ -313,7 +248,7 @@ app.layout = html.Div([
                 html.Div([
                     dcc.Graph(
                         id='regression',
-                        figure=regression
+                        figure=go.Figure()
                     )
                 ]),
 
@@ -333,7 +268,7 @@ app.layout = html.Div([
                 html.Div([
                     dcc.Graph(
                         id='VaR-HS',
-                        figure=fourth
+                        figure=go.Figure()
                     )
                 ]),
 
@@ -342,7 +277,7 @@ app.layout = html.Div([
                 html.Div([
                     dcc.Graph(
                         id='correl',
-                        figure=heatmap
+                        figure=go.Figure()
                     )
                 ]),
 
@@ -351,7 +286,7 @@ app.layout = html.Div([
                 html.Div([
                     dcc.Graph(
                         id='cov',
-                        figure=covariance
+                        figure=go.Figure()
                     )
                 ]),
             ]),
@@ -393,7 +328,7 @@ app.layout = html.Div([
                 html.Div([
                     dcc.Graph(
                         id='efficient-frontier',
-                        figure=efficient_frontier
+                        figure=go.Figure()
                     )
                 ]),
 
@@ -439,7 +374,7 @@ app.layout = html.Div([
                 html.Div([
                     dcc.Graph(
                         id='paulo-portfolio',
-                        figure=paulo_portfolio
+                        figure=go.Figure()
                     )
                 ]),
 
@@ -479,6 +414,7 @@ app.layout = html.Div([
 ])
 
 
+# Callbacks
 @app.callback(
     Output('stock-drop', 'options'),
     [Input('sectors-drop', 'value')])
@@ -503,57 +439,15 @@ def set_stocks_value(available_options):
 def set_stocks_value(btn1, btn2, btn3, stock, opt):
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
 
-    stats = pd.DataFrame(
-        {
-            'Stock': ['S&P500'],
-            'Std': [market.Returns.std()],
-            'Annual Std': [market.Returns.std()* np.sqrt(252)],
-            'Mean': [market.Returns.mean()],
-            'Median': [np.median(market.Returns.std())],
-            'Min': [market.Returns.min()],
-            'Max': [market.Returns.max()],
-            'Kurtosis': [market.Returns.kurtosis()],
-            'Skewness': [market.Returns.skew()],
-            'Alpha': [linregress(market.Returns, market.Returns).intercept],
-            'Beta': [linregress(market.Returns, market.Returns).slope],
-            'VaR 95% HS': [market.Returns.sort_values(ascending=True).quantile(0.05)],
-            'VaR 95% DN': [norm.ppf(1-0.95, market.Returns.mean(), market.Returns.std())],
-            'Systemic Risk': [linregress(market.Returns, market.Returns).slope**2 * market.Returns.var()]
-        },
-        index=[0]
-    ).round(6)
+    stats = stats_market(market)
 
 
     if 'add-stock' in changed_id:
         ALL_STOCKS.update({stock: [x['label'] for x in opt if x['value'] == stock][0]})
 
-        dfs = {}
-        for stock, _ in ALL_STOCKS.items():
-            dfs[stock] = yf.Ticker(stock).history(period="2y")
-            dfs[stock]['Returns'] = dfs[stock].Close.pct_change()
-            dfs[stock] = dfs[stock].iloc[1:]
-            dfs[stock].reset_index(inplace=True)
-            dfs[stock]["Color"] = np.where(dfs[stock]['Returns'] < 0, 'red', 'green')
+        dfs = create_dfs(ALL_STOCKS)
 
-        stats = pd.DataFrame(
-            {
-                'Stock': [name for _, name in ALL_STOCKS.items()],
-                'Std': [dfs[df].Returns.std() for df in dfs],
-                'Annual Std': [dfs[df].Returns.std()* np.sqrt(252) for df in dfs],
-                'Mean': [dfs[df].Returns.mean() for df in dfs],
-                'Median': [np.median(dfs[df].Returns) for df in dfs],
-                'Min': [dfs[df].Returns.min() for df in dfs],
-                'Max': [dfs[df].Returns.max() for df in dfs],
-                'Kurtosis': [dfs[df].Returns.kurtosis() for df in dfs],
-                'Skewness': [dfs[df].Returns.skew() for df in dfs],
-                'Alpha': [linregress(dfs[df].Returns, market[market.Date >= dfs[df].Date.min()].Returns).intercept for df in dfs],
-                'Beta': [linregress(dfs[df].Returns, market[market.Date >= dfs[df].Date.min()].Returns).slope for df in dfs],
-                'VaR 95% HS': [dfs[df].Returns.sort_values(ascending=True).quantile(0.05) for df in dfs],
-                'VaR 95% DN': [norm.ppf(1-0.95, dfs[df].Returns.mean(), dfs[df].Returns.std()) for df in dfs],
-                'Systemic Risk': [linregress(dfs[df].Returns, market[market.Date >= dfs[df].Date.min()].Returns).slope**2 * market[market.Date >= dfs[df].Date.min()].Returns.var() for df in dfs]
-            },
-            index=[df for _, df in ALL_STOCKS.items()]
-        ).round(6)
+        stats = stats_dfs(ALL_STOCKS, dfs, market)
 
     elif 'remove-stock' in changed_id:
         try:
@@ -561,33 +455,9 @@ def set_stocks_value(btn1, btn2, btn3, stock, opt):
         except KeyError:
             pass
 
-        dfs = {}
-        for stock, _ in ALL_STOCKS.items():
-            dfs[stock] = yf.Ticker(stock).history(period="2y")
-            dfs[stock]['Returns'] = dfs[stock].Close.pct_change()
-            dfs[stock] = dfs[stock].iloc[1:]
-            dfs[stock].reset_index(inplace=True)
-            dfs[stock]["Color"] = np.where(dfs[stock]['Returns'] < 0, 'red', 'green')
+        dfs = create_dfs(ALL_STOCKS)
 
-        stats = pd.DataFrame(
-            {
-                'Stock': [name for _, name in ALL_STOCKS.items()],
-                'Std': [dfs[df].Returns.std() for df in dfs],
-                'Annual Std': [dfs[df].Returns.std()* np.sqrt(252) for df in dfs],
-                'Mean': [dfs[df].Returns.mean() for df in dfs],
-                'Median': [np.median(dfs[df].Returns) for df in dfs],
-                'Min': [dfs[df].Returns.min() for df in dfs],
-                'Max': [dfs[df].Returns.max() for df in dfs],
-                'Kurtosis': [dfs[df].Returns.kurtosis() for df in dfs],
-                'Skewness': [dfs[df].Returns.skew() for df in dfs],
-                'Alpha': [linregress(dfs[df].Returns, market[market.Date >= dfs[df].Date.min()].Returns).intercept for df in dfs],
-                'Beta': [linregress(dfs[df].Returns, market[market.Date >= dfs[df].Date.min()].Returns).slope for df in dfs],
-                'VaR 95% HS': [dfs[df].Returns.sort_values(ascending=True).quantile(0.05) for df in dfs],
-                'VaR 95% DN': [norm.ppf(1-0.95, dfs[df].Returns.mean(), dfs[df].Returns.std()) for df in dfs],
-                'Systemic Risk': [linregress(dfs[df].Returns, market[market.Date >= dfs[df].Date.min()].Returns).slope**2 * market[market.Date >= dfs[df].Date.min()].Returns.var() for df in dfs]
-            },
-            index=[df for _, df in ALL_STOCKS.items()]
-        ).round(6)
+        stats = stats_dfs(ALL_STOCKS, dfs, market)
 
     elif 'remove-market' in changed_id:
         try:
@@ -595,33 +465,9 @@ def set_stocks_value(btn1, btn2, btn3, stock, opt):
         except KeyError:
             pass
 
-        dfs = {}
-        for stock, _ in ALL_STOCKS.items():
-            dfs[stock] = yf.Ticker(stock).history(period="2y")
-            dfs[stock]['Returns'] = dfs[stock].Close.pct_change()
-            dfs[stock] = dfs[stock].iloc[1:]
-            dfs[stock].reset_index(inplace=True)
-            dfs[stock]["Color"] = np.where(dfs[stock]['Returns'] < 0, 'red', 'green')
+        dfs = create_dfs(ALL_STOCKS)
 
-        stats = pd.DataFrame(
-            {
-                'Stock': [name for _, name in ALL_STOCKS.items()],
-                'Std': [dfs[df].Returns.std() for df in dfs],
-                'Annual Std': [dfs[df].Returns.std()* np.sqrt(252) for df in dfs],
-                'Mean': [dfs[df].Returns.mean() for df in dfs],
-                'Median': [np.median(dfs[df].Returns) for df in dfs],
-                'Min': [dfs[df].Returns.min() for df in dfs],
-                'Max': [dfs[df].Returns.max() for df in dfs],
-                'Kurtosis': [dfs[df].Returns.kurtosis() for df in dfs],
-                'Skewness': [dfs[df].Returns.skew() for df in dfs],
-                'Alpha': [linregress(dfs[df].Returns, market[market.Date >= dfs[df].Date.min()].Returns).intercept for df in dfs],
-                'Beta': [linregress(dfs[df].Returns, market[market.Date >= dfs[df].Date.min()].Returns).slope for df in dfs],
-                'VaR 95% HS': [dfs[df].Returns.sort_values(ascending=True).quantile(0.05) for df in dfs],
-                'VaR 95% DN': [norm.ppf(1-0.95, dfs[df].Returns.mean(), dfs[df].Returns.std()) for df in dfs],
-                'Systemic Risk': [linregress(dfs[df].Returns, market[market.Date >= dfs[df].Date.min()].Returns).slope**2 * market[market.Date >= dfs[df].Date.min()].Returns.var() for df in dfs]
-            },
-            index=[df for _, df in ALL_STOCKS.items()]
-        )
+        stats = stats_dfs(ALL_STOCKS, dfs, market)
 
     return stats.to_dict('records')
 
@@ -638,31 +484,9 @@ def update_output_div(stock, opt):
 
     the_label = [x['label'] for x in opt if x['value'] == stock]
 
-    df = yf.Ticker(stock).history(period="2y")
-    df['Returns'] = df.Close.pct_change()
-    df = df.iloc[1:]
-    df.reset_index(inplace=True)
-    df["Color"] = np.where(df['Returns'] < 0, 'red', 'green')
+    df = create_df(stock)
 
-    stats = pd.DataFrame(
-        {
-            'Stock': [the_label[0]],
-            'Std': [df.Returns.std()],
-            'Annual Std': [df.Returns.std()* np.sqrt(252)],
-            'Mean': [df.Returns.mean()],
-            'Median': [np.median(df.Returns.std())],
-            'Min': [df.Returns.min()],
-            'Max': [df.Returns.max()],
-            'Kurtosis': [df.Returns.kurtosis()],
-            'Skewness': [df.Returns.skew()],
-            'Alpha': [linregress(df.Returns, market[market.Date >= df.Date.min()].Returns).intercept],
-            'Beta': [linregress(df.Returns, market[market.Date >= df.Date.min()].Returns).slope],
-            'VaR 95% HS': [df.Returns.sort_values(ascending=True).quantile(0.05)],
-            'VaR 95% DN': [norm.ppf(1-0.95, df.Returns.mean(), df.Returns.std())],
-            'Systemic Risk': [linregress(df.Returns, market[market.Date >= df.Date.min()].Returns).slope**2 * market[market.Date >= df.Date.min()].Returns.var()]
-        },
-        index=[0]
-    ).round(6)
+    stats = stats_df(df, market, the_label)
 
     df['log_ret'] = np.log(df.Close/df.Close.shift(1))
     df["log_Color"] = np.where(df['log_ret'] < 0, 'red', 'green')
@@ -865,64 +689,66 @@ def update_output_div(stock, opt):
 )
 def load_stocks(n_clicks):
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
-    dfs = {}
-    for stock, _ in ALL_STOCKS.items():
-        dfs[stock] = yf.Ticker(stock).history(period="2y")
-        dfs[stock]['Returns'] = dfs[stock].Close.pct_change()
-        dfs[stock] = dfs[stock].iloc[1:]
-        dfs[stock].reset_index(inplace=True)
-
-    date_min = max([dfs[stock].Date.min() for stock in dfs])
-    for df in dfs:
-        dfs[df] = dfs[df][dfs[df].Date >= date_min]
-        dfs[df].reset_index(inplace=True)
-
-
-    full_returns = pd.concat([dfs[df].Returns for df in dfs], axis=1)
-    full_returns.columns = [df for df in dfs]
-
-    full_close = pd.concat([dfs[df].Close for df in dfs], axis=1)
-    full_close.columns = [df for df in dfs]
-    log_ret = np.log(full_close/full_close.shift(1))
-
-
-    cov = pd.DataFrame.cov(full_returns)
-
-
-    correl_matrix = np.corrcoef([dfs[stock].Returns for stock in dfs])
-
-    correl = pd.DataFrame(correl_matrix, columns=[stock for stock in dfs],
-                        index=[stock for stock in dfs])
-
-    children = html.Div([
-                dcc.Dropdown(
-                    id='portfolio-stocks',
-                    options=[{'label': label, 'value': value} for value, label in ALL_STOCKS.items()],
-                ),
-            ])
-
-    heatmap = ff.create_annotated_heatmap(
-        z=correl.values[::-1].round(2),
-        x=[stock for stock in dfs],
-        y=[stock for stock in dfs][::-1],
-        xgap=10,
-        ygap=10,
-    )
-    heatmap.update_layout(title_text='Correlation Matrix')
-
-    covariance = ff.create_annotated_heatmap(
-        z=cov.values[::-1].round(6),
-        x=[stock for stock in dfs],
-        y=[stock for stock in dfs][::-1],
-        xgap=10,
-        ygap=10,
-    )
-    covariance.update_layout(title_text='Variance - Covariance Matrix')
 
     if 'load-stocks' in changed_id:
+        dfs = create_dfs(ALL_STOCKS)
+
+        date_min = max([dfs[stock].Date.min() for stock in dfs])
+        for df in dfs:
+            dfs[df] = dfs[df][dfs[df].Date >= date_min]
+            dfs[df].reset_index(inplace=True)
+
+
+        full_returns = pd.concat([dfs[df].Returns for df in dfs], axis=1)
+        full_returns.columns = [df for df in dfs]
+
+        full_close = pd.concat([dfs[df].Close for df in dfs], axis=1)
+        full_close.columns = [df for df in dfs]
+        log_ret = np.log(full_close/full_close.shift(1))
+
+
+        cov = pd.DataFrame.cov(full_returns)
+
+
+        correl_matrix = np.corrcoef([dfs[stock].Returns for stock in dfs])
+
+        correl = pd.DataFrame(correl_matrix, columns=[stock for stock in dfs],
+                            index=[stock for stock in dfs])
+
+        children = html.Div([
+                    dcc.Dropdown(
+                        id='portfolio-stocks',
+                        options=[{'label': label, 'value': value} for value, label in ALL_STOCKS.items()],
+                    ),
+                ])
+
+        heatmap = ff.create_annotated_heatmap(
+            z=correl.values[::-1].round(2),
+            x=[stock for stock in dfs],
+            y=[stock for stock in dfs][::-1],
+            xgap=10,
+            ygap=10,
+        )
+        heatmap.update_layout(title_text='Correlation Matrix')
+
+        covariance = ff.create_annotated_heatmap(
+            z=cov.values[::-1].round(6),
+            x=[stock for stock in dfs],
+            y=[stock for stock in dfs][::-1],
+            xgap=10,
+            ygap=10,
+        )
+        covariance.update_layout(title_text='Variance - Covariance Matrix')
+
         return children, heatmap, covariance
     else:
-        return html.Div([' ']), go.Figure(), go.Figure()
+        children = html.Div([
+                    dcc.Dropdown(
+                        id='portfolio-stocks',
+                        options=[{'label': label, 'value': value} for value, label in ALL_STOCKS.items()],
+                    ),
+                ])
+        return children, go.Figure(), go.Figure()
 
 @app.callback(
     Output('portfolio-stocks', 'value'),
@@ -1086,12 +912,7 @@ def equal_weighted(n_clicks):
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
 
     if 'equal-weighted' in changed_id:
-        dfs = {}
-        for stock, _ in ALL_STOCKS.items():
-            dfs[stock] = yf.Ticker(stock).history(period="2y")
-            dfs[stock]['Returns'] = dfs[stock].Close.pct_change()
-            dfs[stock] = dfs[stock].iloc[1:]
-            dfs[stock].reset_index(inplace=True)
+        dfs = create_dfs(ALL_STOCKS)
 
         date_min = max([dfs[stock].Date.min() for stock in dfs])
         for df in dfs:
@@ -1145,12 +966,7 @@ def equal_weighted(n_clicks):
 def load_portfolio(n_clicks):
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
     if 'load-portfolio' in changed_id:
-        dfs = {}
-        for stock, _ in ALL_STOCKS.items():
-            dfs[stock] = yf.Ticker(stock).history(period="2y")
-            dfs[stock]['Returns'] = dfs[stock].Close.pct_change()
-            dfs[stock] = dfs[stock].iloc[1:]
-            dfs[stock].reset_index(inplace=True)
+        dfs = create_dfs(ALL_STOCKS)
 
         date_min = max([dfs[stock].Date.min() for stock in dfs])
         for df in dfs:
@@ -1253,12 +1069,7 @@ def load_portfolio(n_clicks):
 def min_var_portfolio(n_clicks, investment):
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
     if 'submit-investment' in changed_id:
-        dfs = {}
-        for stock, _ in ALL_STOCKS.items():
-            dfs[stock] = yf.Ticker(stock).history(period="2y")
-            dfs[stock]['Returns'] = dfs[stock].Close.pct_change()
-            dfs[stock] = dfs[stock].iloc[1:]
-            dfs[stock].reset_index(inplace=True)
+        dfs = create_dfs(ALL_STOCKS)
 
         date_min = max([dfs[stock].Date.min() for stock in dfs])
         for df in dfs:
@@ -1437,12 +1248,7 @@ def update_paulo_figure(stock, opt):
 def load_stocks_2(n_clicks):
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
     if 'load-stocks-2' in changed_id:
-        dfs = {}
-        for stock, _ in ALL_STOCKS.items():
-            dfs[stock] = yf.Ticker(stock).history(period="2y")
-            dfs[stock]['Returns'] = dfs[stock].Close.pct_change()
-            dfs[stock] = dfs[stock].iloc[1:]
-            dfs[stock].reset_index(inplace=True)
+        dfs = create_dfs(ALL_STOCKS)
 
         date_min = max([dfs[stock].Date.min() for stock in dfs])
         for df in dfs:
