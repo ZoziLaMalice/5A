@@ -291,7 +291,40 @@ app.layout = html.Div([
                 ]),
             ]),
 
-            dcc.Tab(label='Differents Portfolios', id='tab-3', children=[
+            dcc.Tab(label='Stocks Sentiments Analysis', id='tab-3', children=[
+
+                html.Div([
+                    html.Button(id='load-twitter-data', n_clicks=0, children='Load Twitter Data',
+                    style={'display': 'table-cell'})
+                ], style={'padding': 40, 'margin-left': 'auto', 'margin-right': 'auto', 'display': 'table'}),
+
+                html.Div([
+                    html.Div([
+                        dcc.Graph(
+                            id='tweet-count',
+                            figure=go.Figure()
+                        ),
+                    ]),
+                ]),
+
+                html.Div([
+                    html.Div([
+                        dcc.Graph(
+                            id='word-count',
+                            figure=go.Figure()
+                        ),
+                    ], className="two-thirds column"),
+                    html.Div([
+                        dcc.Graph(
+                            id='sentiment',
+                            figure=go.Figure()
+                        ),
+                    ], className="one-third column"),
+                ]),
+
+            ]),
+
+            dcc.Tab(label='Differents Portfolios', id='tab-4', children=[
 
                 html.Div([
                     html.Button(id='equal-weighted', n_clicks=0, children='Generate Equal Weighted Portfolio',
@@ -386,7 +419,7 @@ app.layout = html.Div([
 
             ]),
 
-            dcc.Tab(label='Stats on Efficient Portfolio', id='tab-4', children=[
+            dcc.Tab(label='Stats on Efficient Portfolio', id='tab-5', children=[
 
                 html.Div([
                     html.Button(id='load-stocks-2', n_clicks=0, children='Load Stocks',
@@ -1324,6 +1357,27 @@ def load_stocks_2(n_clicks):
         return regression, monte_carlo
     else:
         return go.Figure(), go.Figure()
+
+
+@app.callback(
+    Output('tweet-count', 'figure'),
+    Output('word-count', 'figure'),
+    Output('sentiment', 'figure'),
+    [Input('load-twitter-data', 'n_clicks')]
+)
+def load_twitter_data(n_clicks):
+    changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
+    if 'load-twitter-data' in changed_id:
+        twitter_data = {}
+        for stock, _ in ALL_STOCKS.items():
+            twitter_data[stock] = get_tweets_by_query(stock, 10)
+            print(twitter_data[stock][1])
+
+        return go.figure(), go.figure(), go.figure()
+    else:
+        return go.figure(), go.figure(), go.figure()
+
+
 
 
 if __name__ == '__main__':

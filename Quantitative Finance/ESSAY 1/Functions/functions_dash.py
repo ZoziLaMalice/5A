@@ -1,40 +1,7 @@
-import tweepy
-import configparser as cp
-import os
-from datetime import datetime
 import pandas as pd
 from scipy.stats import linregress, norm
 import numpy as np
 import yfinance as yf
-
-config = cp.ConfigParser()
-config.read('./ESSAY 1/config.ini')
-
-# Get your Twitter API credentials and enter them here
-consumer_key = config.get('AUTH', 'consumer_key')
-consumer_secret = config.get('AUTH', 'consumer_secret')
-
-access_key = config.get('AUTH', 'access_key')
-access_secret = config.get('AUTH', 'access_secret')
-
-auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
-auth.set_access_token(access_key, access_secret)
-api = tweepy.API(auth, wait_on_rate_limit=True)
-
-
-def get_tweets_by_query(query, nb_tweets):
-
-    date_since = datetime.today()
-    number_of_tweets = nb_tweets
-
-    # get tweets
-    tweets = []
-    for tweet in tweepy.Cursor(api.search, q=query, lang="en").items(number_of_tweets):
-        # create array of tweet information: username, tweet id, date/time, text
-        tweets.append([tweet.id_str, tweet.user.screen_name, tweet.text])
-
-    return tweets
-
 
 def bbands(price, window_size=10, num_of_std=5):
     rolling_mean = price.rolling(window=window_size).mean()
@@ -132,6 +99,8 @@ def create_dfs(stocks):
         dfs[stock] = dfs[stock].iloc[1:]
         dfs[stock].reset_index(inplace=True)
         dfs[stock]["Color"] = np.where(dfs[stock]['Returns'] < 0, 'red', 'green')
+
+    return dfs
 
 
 def create_df(stock):
