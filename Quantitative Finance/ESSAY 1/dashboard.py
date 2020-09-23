@@ -17,14 +17,14 @@ import numpy as np
 import re
 from scipy.stats import linregress, norm
 
-from Functions import bbands, trading, stats_df, stats_dfs, stats_market, create_df, create_dfs
-from Functions import get_tweets_by_query
-from Functions import count_words, preprocess_nltk, plot_sentiment, plot_word_count
-from Functions import plot_first_graph, plot_second_graph, plot_third_graph
-from Functions import plot_VaR_log, plot_VaR_returns, plot_stocks_stats, stocks_regression
-from Functions import get_min_var_portfolio, get_returns, efficient_portfolio, equal_weighted
-from Functions import portfolio_regression, plot_monte_carlo, get_data
-from Functions import get_paulo_return, plot_paulo_investment
+from functions.practicals_functions import bbands, trading, stats_df, stats_dfs, stats_market, create_df, create_dfs
+from functions.twitter_data import get_tweets_by_query
+from functions.sentiments_graphs import count_words, preprocess_nltk, plot_sentiment, plot_word_count
+from functions.basic_graphs import plot_first_graph, plot_second_graph, plot_third_graph
+from functions.stocks_stats import plot_VaR_log, plot_VaR_returns, plot_stocks_stats, stocks_regression
+from functions.differents_portfolios import get_min_var_portfolio, get_returns, efficient_portfolio, get_equal_weighted
+from functions.stats_efficient_portfolio import portfolio_regression, plot_monte_carlo, get_data
+from functions.paulo_investment import get_paulo_return, plot_paulo_investment
 
 buys = {}
 sells = {}
@@ -649,7 +649,7 @@ def equal_weighted(n_clicks):
             dfs[df] = dfs[df][dfs[df].Date >= date_min]
             dfs[df].reset_index(inplace=True)
 
-        ret_arr, vol_arr, data = equal_weighted(dfs, ALL_STOCKS)
+        ret_arr, vol_arr, data = get_equal_weighted(dfs, ALL_STOCKS)
 
         return '''
         Your equal weighted portfolio has a return of {0:.2f}%, with a volatility of {1:.2f}%

@@ -15,7 +15,7 @@ def get_returns(dfs):
     return full_returns, full_close, log_ret
 
 
-def equal_weighted(dfs, stocks):
+def get_equal_weighted(dfs, stocks):
     full_returns, full_close, log_ret = get_returns(dfs)
 
     np.random.seed(42)

@@ -93,7 +93,7 @@ def plot_word_count(stocks, data, chart_colors, app_color):
             plot_bgcolor=app_color["graph_bg"],
             paper_bgcolor=app_color["graph_bg"],
             font={"color": app_color["graph_font"]},
-            autosize=True,
+            autosize=False,
         )
 
     buttons = []
