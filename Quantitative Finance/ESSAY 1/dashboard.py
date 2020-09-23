@@ -17,7 +17,14 @@ import numpy as np
 import re
 from scipy.stats import linregress, norm
 
-from Functions import *
+from Functions import bbands, trading, stats_df, stats_dfs, stats_market, create_df, create_dfs
+from Functions import get_tweets_by_query
+from Functions import count_words, preprocess_nltk, plot_sentiment, plot_word_count
+from Functions import plot_first_graph, plot_second_graph, plot_third_graph
+from Functions import plot_VaR_log, plot_VaR_returns, plot_stocks_stats, stocks_regression
+from Functions import get_min_var_portfolio, get_returns, efficient_portfolio, equal_weighted
+from Functions import portfolio_regression, plot_monte_carlo, get_data
+from Functions import get_paulo_return, plot_paulo_investment
 
 buys = {}
 sells = {}
@@ -28,6 +35,28 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
 global ALL_STOCKS
 ALL_STOCKS = {'^GSPC': 'S&P500'}
+
+# colors for plots
+global chart_colors
+chart_colors = [
+    '#664DFF',
+    '#893BFF',
+    '#3CC5E8',
+    '#2C93E8',
+    '#0BEBDD',
+    '#0073FF',
+    '#00BDFF',
+    '#A5E82C',
+    '#FFBD42',
+    '#FFCA30'
+]
+# global color setting
+global app_color
+app_color = {
+    "graph_bg": "rgb(221, 236, 255)",
+    "graph_line": "rgb(8, 70, 151)",
+    "graph_font":"rgb(2, 29, 65)"
+}
 
 weights_max_sharpe = []
 
@@ -136,7 +165,12 @@ market_chart.update_layout(
     yaxis=dict(
     ticksuffix=' $'
     ),
+    plot_bgcolor=app_color["graph_bg"],
+    paper_bgcolor=app_color["graph_bg"],
 )
+
+global BASIC_LAYOUT
+BASIC_LAYOUT = go.Layout(plot_bgcolor=app_color["graph_bg"], paper_bgcolor=app_color["graph_bg"],)
 
 # Layout
 app.layout = html.Div([
@@ -204,7 +238,7 @@ app.layout = html.Div([
                     html.Div([
                         dcc.Graph(
                             id='first-graph',
-                            figure=go.Figure()
+                            figure=go.Figure(layout=BASIC_LAYOUT)
                         ),
                     ]),
                 ]),
@@ -220,14 +254,14 @@ app.layout = html.Div([
                 html.Div([
                     dcc.Graph(
                         id='second-graph',
-                        figure=go.Figure()
+                        figure=go.Figure(layout=BASIC_LAYOUT)
                     ),
                 ]),
 
                 html.Div([
                     dcc.Graph(
                         id='third-graph',
-                        figure=go.Figure()
+                        figure=go.Figure(layout=BASIC_LAYOUT)
                     ),
                 ]),
             ]),
@@ -248,7 +282,7 @@ app.layout = html.Div([
                 html.Div([
                     dcc.Graph(
                         id='regression',
-                        figure=go.Figure()
+                        figure=go.Figure(layout=BASIC_LAYOUT)
                     )
                 ]),
 
@@ -268,7 +302,7 @@ app.layout = html.Div([
                 html.Div([
                     dcc.Graph(
                         id='VaR-HS',
-                        figure=go.Figure()
+                        figure=go.Figure(layout=BASIC_LAYOUT)
                     )
                 ]),
 
@@ -277,7 +311,7 @@ app.layout = html.Div([
                 html.Div([
                     dcc.Graph(
                         id='correl',
-                        figure=go.Figure()
+                        figure=go.Figure(layout=BASIC_LAYOUT)
                     )
                 ]),
 
@@ -286,7 +320,7 @@ app.layout = html.Div([
                 html.Div([
                     dcc.Graph(
                         id='cov',
-                        figure=go.Figure()
+                        figure=go.Figure(layout=BASIC_LAYOUT)
                     )
                 ]),
             ]),
@@ -302,7 +336,7 @@ app.layout = html.Div([
                     html.Div([
                         dcc.Graph(
                             id='tweet-count',
-                            figure=go.Figure()
+                            figure=go.Figure(layout=BASIC_LAYOUT)
                         ),
                     ]),
                 ]),
@@ -311,13 +345,13 @@ app.layout = html.Div([
                     html.Div([
                         dcc.Graph(
                             id='word-count',
-                            figure=go.Figure()
+                            figure=go.Figure(layout=BASIC_LAYOUT)
                         ),
                     ], className="two-thirds column"),
                     html.Div([
                         dcc.Graph(
                             id='sentiment',
-                            figure=go.Figure()
+                            figure=go.Figure(layout=BASIC_LAYOUT)
                         ),
                     ], className="one-third column"),
                 ]),
@@ -361,7 +395,7 @@ app.layout = html.Div([
                 html.Div([
                     dcc.Graph(
                         id='efficient-frontier',
-                        figure=go.Figure()
+                        figure=go.Figure(layout=BASIC_LAYOUT)
                     )
                 ]),
 
@@ -407,7 +441,7 @@ app.layout = html.Div([
                 html.Div([
                     dcc.Graph(
                         id='paulo-portfolio',
-                        figure=go.Figure()
+                        figure=go.Figure(layout=BASIC_LAYOUT)
                     )
                 ]),
 
@@ -429,7 +463,7 @@ app.layout = html.Div([
                 html.Div([
                     dcc.Graph(
                         id='regression-portfolio',
-                        figure=go.Figure()
+                        figure=go.Figure(layout=BASIC_LAYOUT)
                     )
                 ]),
 
@@ -438,13 +472,13 @@ app.layout = html.Div([
                 html.Div([
                     dcc.Graph(
                         id='monte-carlo-portfolio',
-                        figure=go.Figure()
+                        figure=go.Figure(layout=BASIC_LAYOUT)
                     )
                 ]),
 
             ]),
         ], style={'padding-top': 30}),
-])
+], style={'background-color': app_color["graph_bg"]})
 
 
 # Callbacks
@@ -524,192 +558,9 @@ def update_output_div(stock, opt):
     df['log_ret'] = np.log(df.Close/df.Close.shift(1))
     df["log_Color"] = np.where(df['log_ret'] < 0, 'red', 'green')
 
-    # First Chart
-    fig = make_subplots(specs=[[{"secondary_y": True}]])
-    fig.add_trace(
-        go.Scatter(
-            x = df.Date,
-            y = df.Close,
-            name = stock,
-            yaxis='y'),
-        secondary_y=False
-    )
-
-    fig.add_trace(go.Scatter(x= covid.Date, y=covid.Case, name='COVID', yaxis='y1'), secondary_y=True)
-
-    fig.update_layout(
-        updatemenus=[dict(
-            x=1.1,
-            y=0.8,
-            active=0,
-            type='buttons',
-            direction='down',
-            buttons=list(
-                [dict(label = 'Show COVID',
-                    method = 'update',
-                    args = [{'visible': [True, True]}]),
-                dict(label = 'Hide COVID',
-                    method = 'update',
-                    args = [{'visible': [True, False]}]),
-                ])
-            )
-        ])
-
-    fig.update_layout(
-        width=1400,
-        height=600,
-        xaxis = dict(
-            rangeslider = {'visible': True},
-        ),
-        title=f'{the_label[0]} Analysis during the COVID',
-        yaxis_title='Stocks',
-        shapes = [dict(
-            x0='2020-02-15', x1='2020-02-15', y0=0, y1=1, xref='x', yref='paper',
-            line_width=2)],
-        annotations=[dict(
-            x='2020-02-17', y=0.95, xref='x', yref='paper',
-            showarrow=False, xanchor='left', text='COVID Begins')],
-        yaxis=dict(
-        ticksuffix=' $'
-        ),
-    )
-
-    # Second Chart
-    row_width = [1]
-    row_width.extend([0.25] * (2 - 1))
-
-    fig2 = make_subplots(
-        rows=2,
-        cols=1,
-        shared_xaxes=True,
-        vertical_spacing=0,
-        row_width=row_width[::-1],
-    )
-
-    bb_avg, bb_upper, bb_lower = bbands(df.Close)
-
-    fig2.add_trace(go.Scatter(x=df.Date, y=bb_upper, yaxis='y2',
-                            line = dict(width = 1),
-                            line_color='#ccc', hoverinfo='none',
-                            legendgroup='Bollinger Bands', name='Bollinger Bands',
-                            mode='lines'),
-                            row=1, col=1)
-
-    fig2.add_trace(go.Scatter(x=df.Date, y=bb_lower, yaxis='y2',
-                            line = dict(width = 1),
-                            line_color='#ccc', hoverinfo='none',
-                            legendgroup='Bollinger Bands', showlegend=False,
-                            mode='lines', fill='tonexty'),
-                            row=1, col=1)
-
-
-    fig2.add_trace(go.Candlestick(x=df.Date,
-                    open=df.Open,
-                    high=df.High,
-                    low=df.Low,
-                    close=df.Close,
-                    name='Candle Stick'), row=1, col=1)
-
-
-    colors = []
-    for i in range(len(df.Close)):
-        if i != 0:
-            if df.Close[i] > df.Close[i-1]:
-                colors.append('green')
-            else:
-                colors.append('red')
-        else:
-            colors.append('red')
-
-
-    fig2.add_trace(go.Bar(x=df.Date, y=df.Volume,
-                        marker=dict(color=colors),
-                        yaxis='y', name='Volume'),
-                        row=2, col=1)
-
-    fig2.update_layout(
-        width=1400,
-        height=800,
-        title=f'{the_label[0]} Analysis during the COVID',
-        yaxis_title='Stocks',
-        shapes = [dict(
-            x0='2020-02-15', x1='2020-02-15', y0=0, y1=1, xref='x', yref='paper',
-            line_width=2)],
-        annotations=[dict(
-            x='2020-02-17', y=0.95, xref='x', yref='paper',
-            showarrow=False, xanchor='left', text='COVID Begins')],
-        yaxis=dict(
-        ticksuffix=' $'
-        ),
-        xaxis = dict(
-        rangeslider = {'visible': False},
-        ),
-    )
-
-
-    # Third Chart
-    fig3 = make_subplots(specs=[[{"secondary_y": True}]])
-
-    # Add traces
-    fig3.add_trace(
-        go.Scatter(x=df.Date, y=df.Close, name="Closing Prices", yaxis="y"),
-        secondary_y=False
-    )
-
-    fig3.add_trace(
-        go.Bar(x=df.Date, y=(df.Returns * 100), name="Returns", marker_color=df.Color, yaxis="y1"),
-        secondary_y=True
-    )
-
-    fig3.add_trace(
-        go.Bar(x=df.Date, y=(df.log_ret * 100), name="Log Returns", marker_color=df.log_Color, yaxis="y1", visible=False),
-        secondary_y=True
-    )
-
-    # Set x-axis title
-    fig3.update_xaxes(title_text="Date")
-
-    fig3.update_layout(
-        width=1400,
-        height=600,
-        title=f'{the_label[0]} Analysis during the COVID',
-        yaxis_title='Stocks',
-        shapes = [dict(
-            x0='2020-02-15', x1='2020-02-15', y0=0, y1=1, xref='x', yref='paper',
-            line_width=2)],
-        annotations=[dict(
-            x='2020-02-17', y=0.95, xref='x', yref='paper',
-            showarrow=False, xanchor='left', text='COVID Begins')]
-    )
-
-    fig3.update_layout(
-        yaxis=dict(
-        title=f"{the_label[0]}'s Closing Prices",
-        ticksuffix=' $'
-        ),
-        yaxis2=dict(
-            title=f"{the_label[0]}'s Returns",
-            ticksuffix = '%'
-        )
-    )
-
-    fig3.update_layout(
-        updatemenus=[dict(
-            x=1.1,
-            y=0.8,
-            active=0,
-            type='buttons',
-            direction='down',
-            buttons=list(
-                [dict(label = 'Returns',
-                    method = 'update',
-                    args = [{'visible': [True, True, False]}]),
-                dict(label = 'Log Returns',
-                    method = 'update',
-                    args = [{'visible': [True, False, True]}]),
-                ])
-            )
-        ])
+    fig = plot_first_graph(df, stock, the_label, covid, app_color)
+    fig2 = plot_second_graph(df, stock, the_label, app_color)
+    fig3 = plot_third_graph(df, stock, the_label, app_color)
 
     return fig, fig2, fig3, stats.to_dict('records')
 
@@ -731,47 +582,7 @@ def load_stocks(n_clicks):
             dfs[df] = dfs[df][dfs[df].Date >= date_min]
             dfs[df].reset_index(inplace=True)
 
-
-        full_returns = pd.concat([dfs[df].Returns for df in dfs], axis=1)
-        full_returns.columns = [df for df in dfs]
-
-        full_close = pd.concat([dfs[df].Close for df in dfs], axis=1)
-        full_close.columns = [df for df in dfs]
-        log_ret = np.log(full_close/full_close.shift(1))
-
-
-        cov = pd.DataFrame.cov(full_returns)
-
-
-        correl_matrix = np.corrcoef([dfs[stock].Returns for stock in dfs])
-
-        correl = pd.DataFrame(correl_matrix, columns=[stock for stock in dfs],
-                            index=[stock for stock in dfs])
-
-        children = html.Div([
-                    dcc.Dropdown(
-                        id='portfolio-stocks',
-                        options=[{'label': label, 'value': value} for value, label in ALL_STOCKS.items()],
-                    ),
-                ])
-
-        heatmap = ff.create_annotated_heatmap(
-            z=correl.values[::-1].round(2),
-            x=[stock for stock in dfs],
-            y=[stock for stock in dfs][::-1],
-            xgap=10,
-            ygap=10,
-        )
-        heatmap.update_layout(title_text='Correlation Matrix')
-
-        covariance = ff.create_annotated_heatmap(
-            z=cov.values[::-1].round(6),
-            x=[stock for stock in dfs],
-            y=[stock for stock in dfs][::-1],
-            xgap=10,
-            ygap=10,
-        )
-        covariance.update_layout(title_text='Variance - Covariance Matrix')
+        children, heatmap, covariance = plot_stocks_stats(dfs, ALL_STOCKS, app_color)
 
         return children, heatmap, covariance
     else:
@@ -781,7 +592,7 @@ def load_stocks(n_clicks):
                         options=[{'label': label, 'value': value} for value, label in ALL_STOCKS.items()],
                     ),
                 ])
-        return children, go.Figure(), go.Figure()
+        return children, go.Figure(layout=BASIC_LAYOUT), go.Figure(layout=BASIC_LAYOUT)
 
 @app.callback(
     Output('portfolio-stocks', 'value'),
@@ -809,132 +620,18 @@ def update_VaR_chart(stock, btn1, btn2, opt):
     df = df.iloc[1:]
     df.reset_index(inplace=True)
 
-    date_min = df.Date.min()
-
-    market_date_min = yf.Ticker('^GSPC').history(period="2y")
-    market_date_min['Returns'] = market_date_min.Close.pct_change()
-    market_date_min = market_date_min.iloc[1:]
-    market_date_min.reset_index(inplace=True)
-    market_date_min = market_date_min[market_date_min.Date >= date_min]
-    market_date_min.reset_index(inplace=True)
-
-    log_ret = np.log(df.Close/df.Close.shift(1)).dropna()
-
-    slope, intercept, r, p, std_err = linregress(df.Returns, market_date_min.Returns)
-
-    x = np.linspace(np.amin(market_date_min.Returns), np.amax(df.Returns))
-    y = slope * x + intercept
-
-    regression = go.Figure(go.Scatter(
-        x=market_date_min.Returns,
-        y=df.Returns,
-        mode="markers",
-        marker={'size': 5, 'color': '#468de2'},
-        name="Returns"
-    ))
-
-    regression.add_trace(go.Scatter(
-        x=x,
-        y=y,
-        mode="lines",
-        marker={'color': '#e34029'},
-        name="Linear Regression"
-    ))
+    regression, log_ret = stocks_regression(df, app_color)
 
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
     if 'var-normal' in changed_id:
-        var = ff.create_distplot([df.Returns], ['Historical Simulation'], bin_size=.002, show_rug=False, colors=['#1669e9', '#e4ed1e'])
-
-        var.add_trace(go.Scatter(
-            mode= "markers+text",
-            text="VaR",
-            name="Value at Risk 95%",
-            x=[df.Returns.sort_values(ascending=True).quantile(0.05)],
-            y=[0],
-            marker={"size": 20, 'color': "#ff9b00"},
-            textposition= 'bottom center'
-        ))
-
-        var.add_trace(go.Scatter(
-            mode= "markers+text",
-            text="VaR",
-            name="Value at Risk 99%",
-            x=[df.Returns.sort_values(ascending=True).quantile(0.01)],
-            y=[0],
-            marker={"size": 20, 'color': "#ff0000"},
-            textposition= 'bottom center',
-            visible=False
-        ))
-
-        var.update_layout(
-            width=1400,
-            height=600,
-        )
-
-        var.update_layout(
-            updatemenus=[dict(
-                active=0,
-                type='buttons',
-                direction='down',
-                buttons=list(
-                    [dict(label = 'VaR 95%',
-                        method = 'update',
-                        args = [{'visible': [True, True, True, False]}]),
-                    dict(label = 'VaR 99%',
-                        method = 'update',
-                        args = [{'visible': [True, True, False, True]}]),
-                    ])
-                )
-            ])
+        var = plot_VaR_returns(df, app_color)
 
         return var, {'display': 'table-cell', 'margin-left': 'auto', 'margin-right': 'auto', 'background-color': 'rgba(150, 220, 240, 0.5'}, {'display': 'table-cell', 'margin-left': 'auto', 'margin-right': 'auto'}, regression
     elif 'var-log' in changed_id:
-        var = ff.create_distplot([log_ret], ['Historical Simulation'], bin_size=.002, show_rug=False, colors=['#1669e9', '#e4ed1e'])
-
-        var.add_trace(go.Scatter(
-            mode= "markers+text",
-            text="VaR",
-            name="Value at Risk 95%",
-            x=[log_ret.sort_values(ascending=True).quantile(0.05)],
-            y=[0],
-            marker={"size": 20, 'color': "#ff9b00"},
-            textposition= 'bottom center'
-        ))
-
-        var.add_trace(go.Scatter(
-            mode= "markers+text",
-            text="VaR",
-            name="Value at Risk 99%",
-            x=[log_ret.sort_values(ascending=True).quantile(0.01)],
-            y=[0],
-            marker={"size": 20, 'color': "#ff0000"},
-            textposition= 'bottom center',
-            visible=False
-        ))
-
-        var.update_layout(
-            width=1400,
-            height=600,
-        )
-
-        var.update_layout(
-            updatemenus=[dict(
-                active=0,
-                type='buttons',
-                direction='down',
-                buttons=list(
-                    [dict(label = 'VaR 95%',
-                        method = 'update',
-                        args = [{'visible': [True, True, True, False]}]),
-                    dict(label = 'VaR 99%',
-                        method = 'update',
-                        args = [{'visible': [True, True, False, True]}]),
-                    ])
-                )
-            ])
+        var = plot_VaR_log(log_ret, app_color)
         return var, {'display': 'table-cell', 'margin-left': 'auto', 'margin-right': 'auto'}, {'display': 'table-cell', 'margin-left': 'auto', 'margin-right': 'auto', 'background-color': 'rgba(150, 220, 240, 0.5)'}, regression
     else:
-        return go.Figure(), {'display': 'table-cell', 'margin-left': 'auto', 'margin-right': 'auto'}, {'display': 'table-cell', 'margin-left': 'auto', 'margin-right': 'auto'}, regression
+        return go.Figure(layout=BASIC_LAYOUT), {'display': 'table-cell', 'margin-left': 'auto', 'margin-right': 'auto'}, {'display': 'table-cell', 'margin-left': 'auto', 'margin-right': 'auto'}, regression
 
 @app.callback(
     Output('equal-weighted-portfolio', 'children'),
@@ -952,36 +649,7 @@ def equal_weighted(n_clicks):
             dfs[df] = dfs[df][dfs[df].Date >= date_min]
             dfs[df].reset_index(inplace=True)
 
-
-        full_returns = pd.concat([dfs[df].Returns for df in dfs], axis=1)
-        full_returns.columns = [df for df in dfs]
-
-        full_close = pd.concat([dfs[df].Close for df in dfs], axis=1)
-        full_close.columns = [df for df in dfs]
-        log_ret = np.log(full_close/full_close.shift(1))
-
-        np.random.seed(42)
-        all_weights = np.zeros((1, len(full_close.columns)))
-        ret_arr = np.zeros(1)
-        vol_arr = np.zeros(1)
-        sharpe_arr = np.zeros(1)
-
-
-        # Weights
-        weights = np.array(np.random.random(len(ALL_STOCKS))) # Problem here
-        weights = weights/np.sum(weights)
-
-        # Expected return
-        ret_arr = np.sum( (log_ret.mean() * weights * 252))
-
-        # Expected volatility
-        vol_arr = np.sqrt(np.dot(weights.T, np.dot(log_ret.cov()*252, weights)))
-
-        data = pd.DataFrame(
-            {
-                'Stock': [stock for _, stock in ALL_STOCKS.items()],
-                'Weight': [100/len(ALL_STOCKS)] * len(ALL_STOCKS)
-            })
+        ret_arr, vol_arr, data = equal_weighted(dfs, ALL_STOCKS)
 
         return '''
         Your equal weighted portfolio has a return of {0:.2f}%, with a volatility of {1:.2f}%
@@ -1006,92 +674,12 @@ def load_portfolio(n_clicks):
             dfs[df] = dfs[df][dfs[df].Date >= date_min]
             dfs[df].reset_index(inplace=True)
 
-
-        full_returns = pd.concat([dfs[df].Returns for df in dfs], axis=1)
-        full_returns.columns = [df for df in dfs]
-
-        full_close = pd.concat([dfs[df].Close for df in dfs], axis=1)
-        full_close.columns = [df for df in dfs]
-        log_ret = np.log(full_close/full_close.shift(1))
-
-        np.random.seed(42)
-        num_ports = 6000
-        all_weights = np.zeros((num_ports, len(full_close.columns)))
-        ret_arr = np.zeros(num_ports)
-        vol_arr = np.zeros(num_ports)
-        sharpe_arr = np.zeros(num_ports)
-
-        try:
-            for x in range(num_ports):
-                # Weights
-                weights = np.array(np.random.random(len(ALL_STOCKS))) # Problem here
-                weights = weights/np.sum(weights)
-
-                # Save weights
-                all_weights[x,:] = weights
-
-                # Expected return
-                ret_arr[x] = np.sum( (log_ret.mean() * weights * 252))
-
-                # Expected volatility
-                vol_arr[x] = np.sqrt(np.dot(weights.T, np.dot(log_ret.cov()*252, weights)))
-
-                # Sharpe Ratio
-                sharpe_arr[x] = ret_arr[x]/vol_arr[x]
-        except ValueError:
-            pass
-
-        max_sr_ret = ret_arr[sharpe_arr.argmax()]
-        max_sr_vol = vol_arr[sharpe_arr.argmax()]
-
         global weights_max_sharpe
-        weights_max_sharpe = list(all_weights[sharpe_arr.argmax()])
-
-        efficient_frontier = go.Figure(go.Scatter(
-            x=vol_arr,
-            y=ret_arr,
-            marker=dict(
-                size=5,
-                color=sharpe_arr,
-                colorbar=dict(
-                    title="Colorbar"
-                ),
-                colorscale="Viridis"
-            ),
-            mode="markers",
-            name="Portfolios (6000)"))
-
-        efficient_frontier.add_trace(go.Scatter(
-            x=[max_sr_vol],
-            y=[max_sr_ret],
-            marker={'color':'red'},
-            mode='markers',
-            name='Efficient Portfolio'
-        ))
-
-        efficient_frontier.update_layout(
-            height=600,
-            width=1400,
-            legend=dict(
-                yanchor="top",
-                y=1.2,
-                xanchor="left",
-                x=0.01
-        ))
-
-        children = '''
-                    Your max sharpe ratio portfolio has a return of {0:.2f}%, with a volatility of {1:.2f}%
-                    '''.format(max_sr_ret*100, max_sr_vol*100)
-
-        data = pd.DataFrame(
-            {
-                'Stock': [stock for _, stock in ALL_STOCKS.items()],
-                'Weight': list(all_weights[sharpe_arr.argmax()])
-            })
+        efficient_frontier, children, data, weights_max_sharpe = efficient_portfolio(dfs, ALL_STOCKS, app_color)
 
         return efficient_frontier, children, data.to_dict('records')
     else:
-        return go.Figure(), '', []
+        return go.Figure(layout=BASIC_LAYOUT), '', []
 
 @app.callback(
     Output('min-var-portfolio', 'children'),
@@ -1109,64 +697,7 @@ def min_var_portfolio(n_clicks, investment):
             dfs[df] = dfs[df][dfs[df].Date >= date_min]
             dfs[df].reset_index(inplace=True)
 
-
-        full_returns = pd.concat([dfs[df].Returns for df in dfs], axis=1)
-        full_returns.columns = [df for df in dfs]
-
-        full_close = pd.concat([dfs[df].Close for df in dfs], axis=1)
-        full_close.columns = [df for df in dfs]
-        log_ret = np.log(full_close/full_close.shift(1))
-        cov_matrix = log_ret.cov()
-
-        np.random.seed(42)
-        num_ports = 6000
-        all_weights = np.zeros((num_ports, len(full_close.columns)))
-        avg_rets = np.zeros(num_ports)
-        port_mean = np.zeros(num_ports)
-        port_stdev = np.zeros(num_ports)
-        var = np.zeros(num_ports)
-        mean_investment = np.zeros(num_ports)
-        stdev_investment = np.zeros(num_ports)
-        cutoff = np.zeros(num_ports)
-
-        initial_investment = investment
-
-        try:
-            for x in range(num_ports):
-                # Weights
-                weights = np.array(np.random.random(len(ALL_STOCKS))) # Problem here
-                weights = weights/np.sum(weights)
-
-                # Save weights
-                all_weights[x,:] = weights
-
-                # Calculate mean returns for portfolio overall,
-                port_mean[x] = log_ret.mean().dot(weights)
-
-                # Calculate portfolio standard deviation
-                port_stdev[x] = np.sqrt(weights.T.dot(cov_matrix).dot(weights))
-
-                # Calculate mean of investment
-                mean_investment[x] = (1+port_mean[x]) * initial_investment
-
-                # Calculate standard deviation of investmnet
-                stdev_investment[x] = initial_investment * port_stdev[x]
-
-                # VaR 99%
-                cutoff[x] = norm.ppf(1-0.99, mean_investment[x], stdev_investment[x])
-                var[x] = initial_investment - cutoff[x]
-        except (ValueError, TypeError):
-            pass
-
-        min_var_ret = port_mean[var.argmin()]
-        min_var_vol = port_stdev[var.argmin()]
-        min_var = var[var.argmin()]
-
-        data = pd.DataFrame(
-            {
-                'Stock': [stock for _, stock in ALL_STOCKS.items()],
-                'Weight': list(all_weights[var.argmin()])
-            })
+        min_var_ret, min_var_vol, min_var, data = get_min_var_portfolio(dfs, investment, ALL_STOCKS, app_color)
 
         return '''
         Your min VaR portfolio has a return of {0:.2f}%, with a volatility of {1:.2f}%.
@@ -1200,31 +731,9 @@ def paulo_investment(n_clicks, investment):
             dfs[stock] = yf.Ticker(stock).history(period="2y", interval='60m')
             dfs[stock].reset_index(inplace=True)
 
-        date_min = max([dfs[stock].Datetime.min() for stock in dfs])
-        for df in dfs:
-            dfs[df] = dfs[df][dfs[df].Datetime >= date_min]
-            dfs[df].reset_index(inplace=True)
-            dfs[df] = dfs[df][['Datetime', 'Close']]
-            dfs[df]['Log_Returns'] = np.log(dfs[df].Close/dfs[df].Close.shift(1))
-            dfs[df] = dfs[df].dropna()
-
-        stock_inv = [investment * i for i in weights_max_sharpe]
-        result = 0
-
         global buys, sells
 
-        for (df, inv) in zip(dfs, stock_inv):
-            r, b, s = trading(dfs[df], inv, 0.04, 0.01)
-            result += r
-            buys[df] = b
-            sells[df] = s
-
-        children = html.Div([
-                    dcc.Dropdown(
-                        id='paulo-stocks',
-                        options=[{'label': label, 'value': value} for value, label in ALL_STOCKS.items()],
-                    ),
-                ])
+        result, children, buys, sells = get_paulo_return(dfs, ALL_STOCKS, investment, weights_max_sharpe)
 
         return f'Your result is {result}', children
     else:
@@ -1242,33 +751,7 @@ def update_paulo_figure(stock, opt):
     df = df.iloc[1:]
     df.reset_index(inplace=True)
 
-    fig = go.Figure()
-
-    fig.add_trace(
-        go.Scatter(
-            x = df.Datetime,
-            y = df.Close,
-            name = stock,
-        )
-    )
-
-    fig.add_trace(go.Scatter(
-        mode= "markers",
-        marker_symbol="triangle-up",
-        x=pd.Series([buys[stock][i][1] for i in range(len(buys[stock]))]),
-        y=pd.Series([buys[stock][i][0] for i in range(len(buys[stock]))]),
-        marker={"size": 8, 'color': "#1df344"},
-        name="Buys"
-    ))
-
-    fig.add_trace(go.Scatter(
-        mode= "markers",
-        marker_symbol="triangle-down",
-        x=pd.Series([sells[stock][i][1] for i in range(len(sells[stock]))]),
-        y=pd.Series([sells[stock][i][0] for i in range(len(sells[stock]))]),
-        marker={"size": 8, 'color': "#f10f0f"},
-        name='Sells'
-    ))
+    fig = plot_paulo_investment(df, buys, sells, stock, app_color)
 
     return fig
 
@@ -1288,75 +771,12 @@ def load_stocks_2(n_clicks):
             dfs[df] = dfs[df][dfs[df].Date >= date_min]
             dfs[df].reset_index(inplace=True)
 
-        market_date_min = yf.Ticker('^GSPC').history(period="2y")
-        market_date_min['Returns'] = market_date_min.Close.pct_change()
-        market_date_min = market_date_min.iloc[1:]
-        market_date_min.reset_index(inplace=True)
-        market_date_min = market_date_min[market_date_min.Date >= date_min]
-        market_date_min.reset_index(inplace=True)
-
-        full_returns = pd.concat([dfs[df].Returns for df in dfs], axis=1)
-        full_returns.columns = [df for df in dfs]
-
-        full_close = pd.concat([dfs[df].Close for df in dfs], axis=1)
-        full_close.columns = [df for df in dfs]
-        log_ret = np.log(full_close/full_close.shift(1))
-
-        portfolio_returns = (full_returns * weights_max_sharpe).sum(axis=1)
-        portfolio_log_returns = (log_ret * weights_max_sharpe).sum(axis=1)
-
-        slope, intercept, r, p, std_err = linregress(portfolio_returns, market_date_min.Returns)
-
-        x = np.linspace(np.amin(market_date_min.Returns), np.amax(portfolio_returns))
-        y = slope * x + intercept
-
-        regression = go.Figure(go.Scatter(
-            x=market_date_min.Returns,
-            y=portfolio_returns,
-            mode="markers",
-            marker={'size': 5, 'color': '#468de2'},
-            name="Returns"
-        ))
-
-        regression.add_trace(go.Scatter(
-            x=x,
-            y=y,
-            mode="lines",
-            marker={'color': '#e34029'},
-            name="Linear Regression"
-        ))
-        regression.update_layout(title_text='Single Index Model')
-
-        #Setting up drift and random component in relatoin to asset data
-        u = portfolio_log_returns.mean()
-        var = portfolio_log_returns.var()
-        drift = u - (0.5 * var)
-        stdev = portfolio_log_returns.std()
-
-        daily_returns = np.exp(drift + stdev * norm.ppf(np.random.rand(25, 30)))
-
-        #Takes last data point as startpoint point for simulation
-        S0 = portfolio_log_returns.iloc[-1]
-        price_list = np.zeros_like(daily_returns)
-
-        price_list[0] = S0
-
-        #Applies Monte Carlo simulation in asset
-        for t in range(1, 25):
-            price_list[t] = price_list[t - 1] * daily_returns[t]
-
-        monte_carlo = go.Figure()
-
-        for i in range(len(price_list)):
-            monte_carlo.add_trace(go.Scatter(
-                x=[i for i in range(31)],
-                y=price_list[i],
-            ))
-
+        regression = portfolio_regression(dfs, date_min, weights_max_sharpe, app_color)
+        monte_carlo = plot_monte_carlo(dfs, date_min, weights_max_sharpe, app_color)
 
         return regression, monte_carlo
     else:
-        return go.Figure(), go.Figure()
+        return go.Figure(layout=BASIC_LAYOUT), go.Figure(layout=BASIC_LAYOUT)
 
 
 @app.callback(
@@ -1369,15 +789,29 @@ def load_twitter_data(n_clicks):
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
     if 'load-twitter-data' in changed_id:
         twitter_data = {}
-        for stock, _ in ALL_STOCKS.items():
-            twitter_data[stock] = get_tweets_by_query(stock, 10)
-            print(twitter_data[stock][1])
+        tweet_count = go.Figure()
+        for stock, name in ALL_STOCKS.items():
+            twitter_data[stock] = get_tweets_by_query(stock, True)
+            tweet_count.add_trace(
+                go.Scatter(
+                    x=twitter_data[stock].groupby('Date').count().index,
+                    y=twitter_data[stock].groupby('Date').count().Text,
+                    name=name,
+                )
+            )
 
-        return go.figure(), go.figure(), go.figure()
+        tweet_count.update_layout(
+                plot_bgcolor=app_color["graph_bg"],
+                paper_bgcolor=app_color["graph_bg"],
+        )
+
+        word_count = plot_word_count(ALL_STOCKS, twitter_data, chart_colors, app_color)
+
+        sentiment = plot_sentiment(ALL_STOCKS, twitter_data, chart_colors, app_color)
+
+        return tweet_count, word_count, sentiment
     else:
-        return go.figure(), go.figure(), go.figure()
-
-
+        return go.Figure(layout=BASIC_LAYOUT), go.Figure(layout=BASIC_LAYOUT), go.Figure(layout=BASIC_LAYOUT)
 
 
 if __name__ == '__main__':
