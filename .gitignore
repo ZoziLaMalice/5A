@@ -1,5 +1,5 @@
 *.pdf
 *.mp4
 config.ini
-**/__pycache__/
-**/.vscode/
+__pycache__/
+.vscode/
