@@ -6,7 +6,7 @@ Here you can find some of projects I've realized during my last year of Master i
   This version has some *bugs* and needs a lot of *improvments*, but this is a good preview of my **first project**.
   
 ### Some screenshots of this project
-![Home 1](5A/Quantitative Finance/ESSAY 1/screenshots/Home_1.jpg)  
+[Home 1](5A/Quantitative Finance/ESSAY 1/screenshots/Home_1.png?raw=True)  
 ![]()  
 ![]()  
 ![]()  
