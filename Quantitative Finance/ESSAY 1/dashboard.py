@@ -60,7 +60,7 @@ app_color = {
 
 weights_max_sharpe = []
 
-with open('./ESSAY 1/sp500_sectors.csv', newline='') as f:
+with open('./sp500_sectors.csv', newline='') as f:
     reader = csv.reader(f)
     sp500_s = list(reader)
 
@@ -92,7 +92,7 @@ market = market.iloc[1:]
 market.reset_index(inplace=True)
 
 global covid
-covid = pd.read_csv('./ESSAY 1/covid_USA.csv')
+covid = pd.read_csv('./covid_USA.csv')
 covid.Date = pd.to_datetime(covid.Date)
 
 stats = pd.DataFrame(

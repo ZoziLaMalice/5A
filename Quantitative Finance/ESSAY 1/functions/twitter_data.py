@@ -5,7 +5,7 @@ from datetime import datetime
 
 # Config Parser for Twitter API authentification
 config = cp.ConfigParser()
-config.read('./ESSAY 1/config.ini')
+config.read('./config.ini')
 
 # Twitter API credentials
 consumer_key = config.get('AUTH', 'consumer_key')
