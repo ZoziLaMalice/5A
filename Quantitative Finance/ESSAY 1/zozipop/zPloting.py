@@ -19,13 +19,13 @@ class zoziPlot:
         self.height = height
 
 
-    def plot_heatmap(self, data, title):
+    def plot_heatmap(self, data, title, round, gap):
         heatmap = ff.create_annotated_heatmap(
-                    z=data.values[::-1].round(2),
+                    z=data.values[::-1].round(round),
                     x=list(data.columns),
                     y=list(data.columns)[::-1],
-                    xgap=10,
-                    ygap=10,
+                    xgap=gap,
+                    ygap=gap,
                     visible=True
                 ).update_layout(
                     title_text=title,
@@ -77,7 +77,7 @@ class zoziPlot:
             title='Simulated Portfolio Optimization based on Efficient Frontier'
         )
 
-        return pyo.iplot(efficient_frontier)
+        return efficient_frontier
 
     def plot_prices(self, prices):
         if isinstance(prices, pd.Series):
@@ -103,7 +103,7 @@ class zoziPlot:
                 ),
             )
 
-            return pyo.iplot(fig)
+            return fig
         else:
             print('Please, pass a pandas.Series Object.')
 
@@ -132,7 +132,7 @@ class zoziPlot:
                 ),
             )
 
-            pyo.iplot(fig)
+            fig
         else:
             print('Please, pass a pandas.DataFrame Object.')
 
@@ -191,7 +191,7 @@ class zoziPlot:
                 text='COVID Begins')]
         )
 
-        pyo.iplot(fig)
+        fig
 
 
     def plot_comparative(self, prices):
@@ -266,4 +266,33 @@ class zoziPlot:
         )
 
 
-        return pyo.iplot(fig)
+        return fig
+
+    def plot_CAPM(self, market_returns, portfolio_returns, regression):
+        fig = go.Figure()
+
+        fig.add_trace(
+            go.Scatter(
+                x=market_returns,
+                y=portfolio_returns,
+                name='Original Data',
+                mode='markers',
+            )
+        )
+
+        fig.add_trace(
+            go.Scatter(
+                x=market_returns,
+                y=regression.intercept + regression.slope*market_returns,
+                name='Fitted Line',
+                mode='lines',
+            )
+        )
+
+        fig.update_layout(
+            title_text='CAPM Regression',
+            width=self.width,
+            height=self.height,
+            )
+
+        return fig
