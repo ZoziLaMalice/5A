@@ -132,7 +132,7 @@ class zoziPlot:
                 ),
             )
 
-            fig
+            return fig
         else:
             print('Please, pass a pandas.DataFrame Object.')
 
@@ -191,7 +191,7 @@ class zoziPlot:
                 text='COVID Begins')]
         )
 
-        fig
+        return fig
 
 
     def plot_comparative(self, prices):
@@ -294,5 +294,35 @@ class zoziPlot:
             width=self.width,
             height=self.height,
             )
+
+        return fig
+
+
+    def plot_FF3(self, df, ff3):
+        fig = go.Figure()
+
+        fig.add_trace(
+            go.Scatter(
+                x=df['MKT'],
+                y=df['XsRet'],
+                name='Original Data',
+                mode='markers',
+            )
+        )
+
+        fig.add_trace(
+            go.Scatter(
+                x=df['MKT'],
+                y=ff3.params.Intercept + ff3.params.MKT*df['MKT'],
+                name='Fitted Line',
+                mode='lines',
+            )
+        )
+
+        fig.update_layout(
+            title_text='FF3 Regression',
+            width=self.width,
+            height=self.height,
+        )
 
         return fig
