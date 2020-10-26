@@ -123,6 +123,8 @@ class zoziPlot:
     def plot_prices_returns(self, prices, returns):
         colors = np.where(returns < 0, 'red', 'green')
 
+        stock_name = prices.name
+
         # Create figure with secondary y-axis
         fig = make_subplots(specs=[[{"secondary_y": True}]])
 
@@ -150,14 +152,14 @@ class zoziPlot:
         fig.update_layout(
             width=self.width,
             height=self.height,
-            title='Boeing Company Analysis during the COVID',
+            title=f'{stock_name} Analysis during the COVID',
             yaxis=dict(
-            title="TSLA Close's Prices",
+            title=f"{stock_name} Close's Prices",
             ticksuffix=' $'
 
             ),
             yaxis2=dict(
-                title="TSLA Returns",
+                title=f"{stock_name} Returns",
                 ticksuffix = '%'
             ),
             shapes = [dict(
