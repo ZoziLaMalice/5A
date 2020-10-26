@@ -294,6 +294,23 @@ class StocksData:
         return portfolio_returns
 
 
+    def get_statistics_portfolio(self, selection, weights, percentage=True, logs=False):
+        portfolio_returns = self.compute_returns_portfolio(
+            selection, weights, logs)
+
+        if logs:
+            stats = self.compute_statistics(
+                portfolio_returns, self.market_logs)
+        else:
+            stats = self.compute_statistics(
+                portfolio_returns, self.market_returns)
+
+        if percentage:
+            stats = stats.multiply([100]*7+[1]*4+[100]*3, axis=1)
+
+        return stats
+
+
     def portfolio_vs_market_CAPM(self, selection, weights, logs=False):
         # split dependent and independent variable
         if logs:
