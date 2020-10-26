@@ -4,6 +4,7 @@ import numpy as np
 from numpy.lib.arraysetops import isin
 import plotly.graph_objects as go
 import plotly.express as px
+import plotly.figure_factory as ff
 from plotly.subplots import make_subplots
 import plotly.io as pio
 import plotly.offline as pyo
@@ -16,6 +17,22 @@ class zoziPlot:
     def __init__(self, width, height):
         self.width = width
         self.height = height
+
+
+    def plot_heatmap(self, data, title):
+        heatmap = ff.create_annotated_heatmap(
+                    z=data.values[::-1].round(2),
+                    x=list(data.columns),
+                    y=list(data.columns)[::-1],
+                    xgap=10,
+                    ygap=10,
+                    visible=True
+                ).update_layout(
+                    title_text=title,
+                )
+
+        return heatmap
+
 
     def plot_efficient_frontier(self, simulation, allocation):
         efficient_frontier = go.Figure(go.Scatter(
