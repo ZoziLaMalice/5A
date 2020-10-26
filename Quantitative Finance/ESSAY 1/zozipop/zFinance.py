@@ -3,6 +3,7 @@ import numpy as np
 from scipy.stats import linregress, norm
 from scipy.optimize import minimize
 import statsmodels.api as sm
+from itertools import combinations
 
 # Plotly Stuff
 import plotly.graph_objects as go
@@ -252,6 +253,34 @@ class StocksData:
 
         stats = self.get_ret_vol_sr(returns, results.x, geometric=geometric)
         return stats, results.x
+
+
+    def find_optimal_portfolio(self, min_stocks, max_stocks, stocks_names):
+        comb = {}
+
+        sr_keys = [i for i in range(min_stocks, max_stocks)]
+        sr_values = [[] for i in range(min_stocks, max_stocks)]
+        sr = dict(zip(sr_keys, sr_values))
+
+        sr_max = {}
+        comb_max = {}
+        comb_max_stocks = {}
+
+        for i in range(min_stocks, max_stocks):
+            comb[i] = list(combinations(stocks_names, i))
+            for combs in comb[i]:
+                sr[i].append(self.maximize_sharpe_ratio(list(combs))[0][2])
+            sr_max[i] = np.array(sr[i]).argmax()
+            comb_max[i] = sr[i][sr_max[i]]
+            comb_max_stocks[i] = comb[i][sr_max[i]]
+
+        results = {}
+        for i in range(min_stocks, max_stocks):
+            results[f'{i} Stocks'] = {
+                'Sharpe Ratio': comb_max[i], 'Stocks': list(comb_max_stocks[i])}
+
+        return results
+
 
 
     def compute_returns_portfolio(self, selection, weights, logs=False):
