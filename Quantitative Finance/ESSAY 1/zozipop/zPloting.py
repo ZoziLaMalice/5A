@@ -90,7 +90,7 @@ class zoziPlot:
                 width=self.width,
                 height=self.height,
                 title=f'{stock_name} Analysis during the COVID',
-                yaxis_title='Closing Price',
+                yaxis_title='Adj Closing Price',
                 xaxis_title='Date',
                 shapes = [dict(
                     x0='2020-02-15', x1='2020-02-15', y0=0, y1=1, xref='x', yref='paper',
@@ -120,7 +120,7 @@ class zoziPlot:
                 width=self.width,
                 height=self.height,
                 title=f'{stock_name} Analysis during the COVID',
-                yaxis_title='Prices',
+                yaxis_title='Adj Closing Prices',
                 shapes = [dict(
                     x0='2020-02-15', x1='2020-02-15', y0=0, y1=1, xref='x', yref='paper',
                     line_width=2)],
@@ -171,7 +171,7 @@ class zoziPlot:
             height=self.height,
             title=f'{stock_name} Analysis during the COVID',
             yaxis=dict(
-            title=f"{stock_name} Close's Prices",
+            title=f"{stock_name} Adj Closing Prices",
             ticksuffix=' $'
 
             ),
@@ -194,7 +194,7 @@ class zoziPlot:
         return fig
 
 
-    def plot_comparative(self, prices):
+    def plot_comparative_prices(self, prices):
         fig = go.Figure()
 
         visible = [False] * len(prices.columns)
@@ -240,7 +240,7 @@ class zoziPlot:
             width=self.width,
             height=self.height,
             title='Two years in S&P500',
-            yaxis_title='Closing Prices',
+            yaxis_title='Adj Closing Prices',
             shapes = [dict(
                 x0='2020-02-15', x1='2020-02-15',
                 y0=0, y1=1,
@@ -323,6 +323,166 @@ class zoziPlot:
             title_text='FF3 Regression',
             width=self.width,
             height=self.height,
+        )
+
+        return fig
+
+
+    def plot_comparative_prices_ret(self, prices, returns):
+        colors = {}
+        for name in returns.columns:
+            colors[name] = np.where(returns[name] < 0, 'red', 'green')
+
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
+
+        visible = [False] * len(prices.columns)
+        visible[0] = True
+
+        for i, name in enumerate(prices.columns):
+            fig.add_trace(
+                go.Scatter(
+                    x=prices[name].index,
+                    y=prices[name],
+                    name=name,
+                    visible=visible[i],
+                    yaxis='y'
+                ),
+                secondary_y=False
+            )
+
+        for i, name in enumerate(prices.columns):
+            fig.add_trace(
+                go.Bar(x=returns[name].index,
+                    y=(returns[name] * 100),
+                    marker_color=colors[name],
+                    name=name,
+                    visible=visible[i],
+                    yaxis="y1"),
+                secondary_y=True
+            )
+
+
+        buttons = []
+
+        for i, name in enumerate(prices.columns):
+            false_true = [False] * len(prices.columns)
+            false_true[i] = True
+            buttons.append(
+                dict(label=name,
+                    method='update',
+                    args=[{'visible': false_true}])
+            )
+
+        fig.update_layout(
+
+            updatemenus=[
+                dict(buttons=buttons,
+                    direction="down",
+                    pad={"r": 10, "t": 10},
+                    x=0.8,
+                    xanchor="left",
+                    y=1.2,
+                    yanchor="top",
+                    active=0,
+                    )],
+        )
+
+        fig.update_layout(
+            width=self.width,
+            height=self.height,
+            title='Two years in S&P500',
+            yaxis_title='Adj Closing Prices',
+            yaxis2_title='Returns',
+            shapes=[dict(
+                x0='2020-02-15', x1='2020-02-15',
+                y0=0, y1=1,
+                xref='x', yref='paper',
+                line_width=2)],
+
+            annotations=[
+                dict(x='2020-02-17', y=0.95,
+                    xref='x', yref='paper',
+                    showarrow=False, xanchor='left',
+                    text='COVID Begins'),
+
+                dict(text="Choose Stocks:", showarrow=False,
+                    x=0.61, xanchor='left',
+                    y=1.17, yanchor="top",
+                    yref='paper', xref='paper',
+                    font=dict(size=18))
+            ],
+
+            yaxis=dict(
+                ticksuffix=' $'
+            ),
+        )
+
+        return fig
+
+
+    def plot_comparative_candles(self, complete_data):
+        fig = go.Figure()
+
+        stocks_name = complete_data.columns.levels[0]
+
+        visible = [False] * len(stocks_name)
+        visible[0] = True
+
+        for i, name in enumerate(stocks_name):
+            fig.add_trace(
+                go.Candlestick(x=complete_data[name].index,
+                            open=complete_data[name].Open,
+                            high=complete_data[name].High,
+                            low=complete_data[name].Low,
+                            close=complete_data[name].Close,
+                            name=name,
+                            visible=visible[i])
+            )
+
+        fig.update_layout(
+            width=self.width,
+            height=self.height,
+            title='Empirical Analysis during the COVID',
+            yaxis_title='Adj Closing Prices',
+            shapes=[dict(
+                x0='2020-02-15', x1='2020-02-15', y0=0, y1=1, xref='x', yref='paper',
+                line_width=2)],
+            annotations=[dict(
+                x='2020-02-17', y=0.95, xref='x', yref='paper',
+                showarrow=False, xanchor='left', text='COVID Begins'),
+                dict(text="Choose Stocks:", showarrow=False,
+                     x=0.61, xanchor='left',
+                     y=1.17, yanchor="top",
+                     yref='paper', xref='paper',
+                     font=dict(size=18))],
+            yaxis=dict(
+                ticksuffix=' $'
+            ),
+        )
+
+        buttons = []
+
+        for i, name in enumerate(stocks_name):
+            false_true = [False] * len(stocks_name)
+            false_true[i] = True
+            buttons.append(
+                dict(label=name,
+                    method='update',
+                    args=[{'visible': false_true}])
+            )
+
+        fig.update_layout(
+
+            updatemenus=[
+                dict(buttons=buttons,
+                    direction="down",
+                    pad={"r": 10, "t": 10},
+                    x=0.8,
+                    xanchor="left",
+                    y=1.2,
+                    yanchor="top",
+                    active=0,
+                    )],
         )
 
         return fig
