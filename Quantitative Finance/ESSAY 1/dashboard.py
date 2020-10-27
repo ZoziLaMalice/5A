@@ -6,43 +6,119 @@ from dash.exceptions import PreventUpdate
 import dash_table
 import yfinance as yf
 import pandas as pd
-import csv
-import html5lib
-import plotly.express as px
-from datetime import datetime
-import plotly.graph_objects as go
-import plotly.figure_factory as ff
-from plotly.subplots import make_subplots
-import numpy as np
-import re
-from scipy.stats import linregress, norm
 
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+from zozipop import StocksData, zoziDash, zoziDl
 
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+zdl = zoziDl('2018-06-30')
+complete_data = zdl.get_stocks_data()
+market = zdl.get_market_data()
+
+stocks_object = StocksData(complete_data, market)
+zp = zoziDash(600)
+
+prices = stocks_object.get('prices')
+
+app = dash.Dash(__name__, meta_tags=[
+                {"name": "viewport", "content": "width=device-width, initial-scale=1"}])
 
 app.layout = html.Div([
     html.Div([
         html.Div([
             html.H1('The S&P500 during the COVID crisis'),
-            html.H4(
-                '''This dashboard shows some financials
-                charts about S&P500 stocks,
-                especially during the COVID'''
+        ], className='app__header__title'),
+        html.Div([
+            html.P(
+                'This dashboard shows some financials charts about S&P500 stocks, especially during the COVID'
                 ),
+        ], className='app__comment')
+    ], className='app__header'),
+    html.Div([
+        html.Div([
+            html.H3('Here my stocks selection')
         ]),
         html.Div([
             html.Div([
-                html.H3('Here my stocks selection')
-            ]),
-            html.Div([
-                html.H5('Sectors: Materials'),
-                html.H6('Stocks: NME'),
+                html.H4('Materials'),
+                html.H5('Newmont Corporation'),
                 html.P('This stocks represent....')
-            ])
-        ])
-    ])
-])
+            ], className='three columns stock__info'),
+            html.Div([
+                html.H4('Communication Services'),
+                html.H5('Alphabet Inc.'),
+                html.P('This stocks represent....')
+            ], className='three columns stock__info'),
+            html.Div([
+                html.H4('Consumer Discretionary'),
+                html.H5('Amazon.com Inc.'),
+                html.P('This stocks represent....')
+            ], className='three columns stock__info'),
+            html.Div([
+                html.H4('Consumer Staples'),
+                html.H5('PepsiCo Inc.'),
+                html.P('This stocks represent....')
+            ], className='three columns stock__info'),
+        ], className='card__container'),
+        html.Div([
+            html.Div([
+                html.H4('Energy'),
+                html.H5('National Oilwell Varco Inc.'),
+                html.P('This stocks represent....')
+            ], className='three columns stock__info'),
+            html.Div([
+                html.H4('Financial Services'),
+                html.H5('Bank of America Corp'),
+                html.P('This stocks represent....')
+            ], className='three columns stock__info'),
+            html.Div([
+                html.H4('Healthcare'),
+                html.H5('HCA Healthcare'),
+                html.P('This stocks represent....')
+            ], className='three columns stock__info'),
+            html.Div([
+                html.H4('Industrials'),
+                html.H5('Boeing Company'),
+                html.P('This stocks represent....')
+            ], className='three columns stock__info'),
+        ], className='card__container'),
+        html.Div([
+            html.Div([
+                html.H4('Real Estate'),
+                html.H5(' Hotels & Resorts'),
+                html.P('This stocks represent....')
+            ], className='three columns stock__info'),
+            html.Div([
+                html.H4('Information Technology'),
+                html.H5('Apple Inc.'),
+                html.P('This stocks represent....')
+            ], className='three columns stock__info'),
+            html.Div([
+                html.H4('Utilities'),
+                html.H5('American Electric Power'),
+                html.P('This stocks represent....')
+            ], className='three columns stock__info'),
+        ], className='card__container')
+    ], className='app__infos'),
+    html.Div([
+        html.Div([
+            dcc.Graph(
+                id='Test',
+                figure=zp.plot_comparative_candles(complete_data),
+                config={
+                    'displayModeBar': False
+                }
+            )
+        ], className='two-thirds column'),
+        html.Div([
+            dcc.Graph(
+                id='Test-2',
+                figure=zp.plot_comparative_prices(prices),
+                config={
+                    'displayModeBar': False
+                }
+            )
+        ], className='one-thirds column')
+    ], className='app__content')
+], className='app__container')
 
 if __name__ == '__main__':
     app.run_server(debug=True)

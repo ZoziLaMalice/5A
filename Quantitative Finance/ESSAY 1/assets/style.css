@@ -1,0 +1,80 @@
+body {
+    font-family: "Roboto", sans-serif;
+    color: rgb(2, 34, 75);
+    background-color: rgb(255, 255, 255);
+}
+
+h4 {
+    font-size: 19px;
+    font-weight: bold;
+}
+
+h5 {
+    font-size: 14px;
+    text-decoration: underline;
+}
+
+
+
+.app__header {
+    display: block;
+    color: rgb(2, 29, 65);
+}
+
+.app__footer {
+    display: flex;
+    text-align: center;
+    color: rgb(2, 29, 65);
+}
+
+.app__header__title {
+    color: rgb(3, 18, 37) !important;
+    text-decoration: none;
+    letter-spacing: 0.23rem;
+}
+
+.app__header__title--grey {
+    color: rgb(4, 47, 85);
+}
+
+.app__comment {
+    color: rgb(4, 47, 85);
+    margin: 20px 0px;
+}
+
+.app__menu__img {
+    margin-top: 25px;
+    margin-right: 50px;
+    height: 65px;
+    width: auto;
+}
+
+.app__content {
+    display: inline-flex;
+    margin-top: 10px;
+}
+
+.stock__info {
+    color: rgb(255, 255, 255);
+    background-color: rgb(2, 34, 75);
+    border-radius: 10px;
+    margin: 5px;
+    padding: 10px;
+    height: 250px;
+}
+
+.card__container {
+    margin: 1% 5%;
+}
+
+.number_of_tweets {
+    display: flex;
+    flex-direction: column;
+    background-color: rgb(221, 236, 255);
+    border-radius: 0.55rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+}
+
+.app__infos {
+    display: block;
+}
