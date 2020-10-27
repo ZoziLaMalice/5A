@@ -78,7 +78,7 @@ class zoziDash:
 
     def plot_prices(self, prices):
         if isinstance(prices, pd.Series):
-            fig = px.line(x=prices.index, y=prices)
+            fig = go.Figure(go.Scatter(x=prices.index, y=prices))
             fig.update_xaxes(rangeslider_visible=True)
 
             stock_name = prices.name
@@ -86,16 +86,24 @@ class zoziDash:
             fig.update_layout(
                 height=self.height,
                 title=f'{stock_name} Analysis during the COVID',
-                yaxis_title='Adj Closing Price',
-                xaxis_title='Date',
-                shapes = [dict(
+                xaxis=dict(automargin=False,
+                           rangeslider=dict(visible=False)),
+                shapes=[dict(
                     x0='2020-02-15', x1='2020-02-15', y0=0, y1=1, xref='x', yref='paper',
                     line_width=2)],
                 annotations=[dict(
                     x='2020-02-17', y=0.95, xref='x', yref='paper',
                     showarrow=False, xanchor='left', text='COVID Begins')],
                 yaxis=dict(
-                ticksuffix=' $'
+                    ticksuffix=' $',
+                ),
+                autosize=True,
+                margin=go.layout.Margin(
+                    l=5,
+                    r=5,
+                    b=45,
+                    t=25,
+                    pad=4
                 ),
             )
 
@@ -115,7 +123,8 @@ class zoziDash:
             fig.update_layout(
                 height=self.height,
                 title=f'{stock_name} Analysis during the COVID',
-                yaxis_title='Adj Closing Prices',
+                xaxis=dict(automargin=False,
+                           rangeslider=dict(visible=False)),
                 shapes = [dict(
                     x0='2020-02-15', x1='2020-02-15', y0=0, y1=1, xref='x', yref='paper',
                     line_width=2)],
@@ -124,6 +133,13 @@ class zoziDash:
                     showarrow=False, xanchor='left', text='COVID Begins')],
                 yaxis=dict(
                 ticksuffix=' $'
+                ),
+                margin=go.layout.Margin(
+                    l=25,
+                    r=5,
+                    b=45,
+                    t=25,
+                    pad=4
                 ),
             )
 
@@ -164,13 +180,20 @@ class zoziDash:
         fig.update_layout(
             height=self.height,
             title=f'{stock_name} Analysis during the COVID',
+            xaxis=dict(automargin=False,
+                       rangeslider=dict(visible=False)),
             yaxis=dict(
-            title=f"{stock_name} Adj Closing Prices",
-            ticksuffix=' $'
-
+                ticksuffix=' $',
+            ),
+            autosize=False,
+            margin=go.layout.Margin(
+                l=75,
+                r=25,
+                b=45,
+                t=25,
+                pad=4
             ),
             yaxis2=dict(
-                title=f"{stock_name} Returns",
                 ticksuffix = '%'
             ),
             shapes = [dict(
@@ -233,7 +256,6 @@ class zoziDash:
         fig.update_layout(
             height=self.height,
             title='Two years in S&P500',
-            yaxis_title='Adj Closing Prices',
             shapes = [dict(
                 x0='2020-02-15', x1='2020-02-15',
                 y0=0, y1=1,
@@ -432,7 +454,6 @@ class zoziDash:
         fig.update_layout(
             height=self.height,
             title='Empirical Analysis during the COVID',
-            yaxis_title='Adj Closing Prices',
             xaxis=dict(automargin=False,
             rangeslider=dict(visible=False)),
             shapes=[dict(

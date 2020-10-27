@@ -14,9 +14,10 @@ complete_data = zdl.get_stocks_data()
 market = zdl.get_market_data()
 
 stocks_object = StocksData(complete_data, market)
-zp = zoziDash(600)
+zp = zoziDash(500)
+lilzp = zoziDash(250)
 
-prices = stocks_object.get('prices')
+prices = stocks_object.get('prices')['AAPL']
 
 app = dash.Dash(__name__, meta_tags=[
                 {"name": "viewport", "content": "width=device-width, initial-scale=1"}])
@@ -102,7 +103,7 @@ app.layout = html.Div([
         html.Div([
             dcc.Graph(
                 id='Test',
-                figure=zp.plot_comparative_candles(complete_data),
+                figure=zp.plot_candles(complete_data['AAPL'], 'AAPL'),
                 config={
                     'displayModeBar': False
                 }
@@ -111,12 +112,13 @@ app.layout = html.Div([
         html.Div([
             dcc.Graph(
                 id='Test-2',
-                figure=zp.plot_comparative_prices(prices),
+                # Focus on the COVID Period
+                figure=lilzp.plot_prices(prices),
                 config={
                     'displayModeBar': False
                 }
             )
-        ], className='one-thirds column')
+        ], className='one-third column')
     ], className='app__content')
 ], className='app__container')
 

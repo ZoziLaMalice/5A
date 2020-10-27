@@ -19,7 +19,8 @@ h5 {
 }
 
 .app__header {
-    display: block;
+    display: flex;
+    flex-flow: column;
     color: rgb(2, 29, 65);
 }
 
@@ -52,8 +53,8 @@ h5 {
 }
 
 .app__content {
-    display: block;
-    margin-top: 10px;
+    display: flex;
+    margin-top: 30px;
 }
 
 .stock__info {
@@ -78,5 +79,6 @@ h5 {
 }
 
 .app__infos {
-    display: block;
-}
+    display: flex;
+    flex-flow: column;
+    }
