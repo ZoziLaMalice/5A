@@ -15,9 +15,10 @@ pio.templates.default = "plotly"
 class zoziDash:
     def __init__(self, height):
         self.height = height
+        self.bg_color = 'rgb(221, 236, 255)'
 
 
-    def plot_heatmap(self, data, title, round, gap):
+    def plot_heatmap(self, data, round, gap):
         heatmap = ff.create_annotated_heatmap(
                     z=data.values[::-1].round(round),
                     x=list(data.columns),
@@ -25,8 +26,17 @@ class zoziDash:
                     xgap=gap,
                     ygap=gap,
                     visible=True
-                ).update_layout(
-                    title_text=title,
+                )
+        heatmap.update_layout(
+            margin=go.layout.Margin(
+                l=10,
+                r=10,
+                b=30,
+                t=30,
+                pad=4
+            ),
+            paper_bgcolor=self.bg_color,
+            plot_bgcolor=self.bg_color,
                 )
 
         return heatmap
@@ -79,15 +89,14 @@ class zoziDash:
     def plot_prices(self, prices):
         if isinstance(prices, pd.Series):
             fig = go.Figure(go.Scatter(x=prices.index, y=prices))
-            fig.update_xaxes(rangeslider_visible=True)
 
             stock_name = prices.name
 
             fig.update_layout(
                 height=self.height,
-                title=f'{stock_name} Analysis during the COVID',
                 xaxis=dict(automargin=False,
-                           rangeslider=dict(visible=False)),
+                           rangeslider=dict(visible=False),
+                           range=['2020-01-01', '2020-03-30']),
                 shapes=[dict(
                     x0='2020-02-15', x1='2020-02-15', y0=0, y1=1, xref='x', yref='paper',
                     line_width=2)],
@@ -96,15 +105,21 @@ class zoziDash:
                     showarrow=False, xanchor='left', text='COVID Begins')],
                 yaxis=dict(
                     ticksuffix=' $',
+                    range=[prices[(prices.index > '2020-01-01') &
+                                (prices.index < '2020-03-30')].min(),
+                            prices[(prices.index > '2020-01-01') &
+                                (prices.index < '2020-03-30')].max()*1.05]
                 ),
                 autosize=True,
                 margin=go.layout.Margin(
-                    l=5,
-                    r=5,
-                    b=45,
-                    t=25,
+                    l=10,
+                    r=10,
+                    b=30,
+                    t=30,
                     pad=4
                 ),
+                paper_bgcolor=self.bg_color,
+                plot_bgcolor=self.bg_color,
             )
 
             return fig
@@ -112,7 +127,7 @@ class zoziDash:
             print('Please, pass a pandas.Series Object.')
 
 
-    def plot_candles(self, complete_data, stock_name):
+    def plot_candles(self, complete_data):
         if isinstance(complete_data, pd.DataFrame):
             fig = go.Figure(data=[go.Candlestick(x=complete_data.index,
                             open=complete_data.Open,
@@ -122,9 +137,9 @@ class zoziDash:
 
             fig.update_layout(
                 height=self.height,
-                title=f'{stock_name} Analysis during the COVID',
                 xaxis=dict(automargin=False,
-                           rangeslider=dict(visible=False)),
+                           rangeslider=dict(visible=False),
+                           range=['2020-01-01', '2020-03-30']),
                 shapes = [dict(
                     x0='2020-02-15', x1='2020-02-15', y0=0, y1=1, xref='x', yref='paper',
                     line_width=2)],
@@ -132,15 +147,22 @@ class zoziDash:
                     x='2020-02-17', y=0.95, xref='x', yref='paper',
                     showarrow=False, xanchor='left', text='COVID Begins')],
                 yaxis=dict(
-                ticksuffix=' $'
+                    ticksuffix=' $',
+                    range=[complete_data[(complete_data.index > '2020-01-01') &
+                                         (complete_data.index < '2020-03-30')].Open.min(),
+                           complete_data[(complete_data.index > '2020-01-01') &
+                                         (complete_data.index < '2020-03-30')].Open.max()*1.05]
                 ),
+                autosize=True,
                 margin=go.layout.Margin(
-                    l=25,
-                    r=5,
-                    b=45,
-                    t=25,
+                    l=10,
+                    r=10,
+                    b=30,
+                    t=30,
                     pad=4
                 ),
+                paper_bgcolor=self.bg_color,
+                plot_bgcolor=self.bg_color,
             )
 
             return fig
@@ -167,31 +189,20 @@ class zoziDash:
 
         fig.add_trace(
             go.Bar(x=returns.index,
-                y=(returns * 100),
-                name="Returns",
-                marker_color=colors,
-                yaxis="y1"),
+                    y=(returns * 100),
+                    name="Returns",
+                    marker_color=colors,
+                    marker_line_width=0.5,
+                    yaxis="y1"),
             secondary_y=True
         )
 
-        # Set x-axis title
-        fig.update_xaxes(title_text="Date")
-
         fig.update_layout(
             height=self.height,
-            title=f'{stock_name} Analysis during the COVID',
             xaxis=dict(automargin=False,
                        rangeslider=dict(visible=False)),
             yaxis=dict(
                 ticksuffix=' $',
-            ),
-            autosize=False,
-            margin=go.layout.Margin(
-                l=75,
-                r=25,
-                b=45,
-                t=25,
-                pad=4
             ),
             yaxis2=dict(
                 ticksuffix = '%'
@@ -205,83 +216,22 @@ class zoziDash:
                 x='2020-02-17', y=0.95,
                 xref='x', yref='paper',
                 showarrow=False, xanchor='left',
-                text='COVID Begins')]
-        )
-
-        return fig
-
-
-    def plot_comparative_prices(self, prices):
-        fig = go.Figure()
-
-        visible = [False] * len(prices.columns)
-        visible[0] = True
-
-        for i, name in enumerate(prices.columns):
-            fig.add_trace(
-                go.Scatter(
-                    x = prices[name].index,
-                    y = prices[name],
-                    name = name,
-                    visible=visible[i]
-                )
-            )
-
-        buttons = []
-
-        for i, name in enumerate(prices.columns):
-            false_true = [False] * len(prices.columns)
-            false_true[i] = True
-            buttons.append(
-                dict(label = name,
-                        method = 'update',
-                        args = [{'visible': false_true}])
-            )
-
-        fig.update_layout(
-
-            updatemenus=[
-                dict(buttons=buttons,
-                direction="down",
-                pad={"r": 10, "t": 10},
-                x=0.8,
-                xanchor="left",
-                y=1.2,
-                yanchor="top",
-                active=0,
-                )],
-        )
-
-
-        fig.update_layout(
-            height=self.height,
-            title='Two years in S&P500',
-            shapes = [dict(
-                x0='2020-02-15', x1='2020-02-15',
-                y0=0, y1=1,
-                xref='x', yref='paper',
-                line_width=2)],
-
-            annotations=[
-                dict(x='2020-02-17', y=0.95,
-                xref='x', yref='paper',
-                showarrow=False, xanchor='left',
-                text='COVID Begins'),
-
-                dict(text="Choose Stocks:", showarrow=False,
-                x=0.61, xanchor='left',
-                y=1.17, yanchor="top",
-                yref='paper', xref='paper',
-                font=dict(size=18))
-                ],
-
-            yaxis=dict(
-            ticksuffix=' $'
+                text='COVID Begins')],
+            autosize=True,
+            margin=go.layout.Margin(
+                l=10,
+                r=10,
+                b=30,
+                t=30,
+                pad=4
             ),
+            paper_bgcolor=self.bg_color,
+            plot_bgcolor=self.bg_color,
+            showlegend=False
         )
 
-
         return fig
+
 
     def plot_CAPM(self, market_returns, portfolio_returns, regression):
         fig = go.Figure()
@@ -336,165 +286,6 @@ class zoziDash:
         fig.update_layout(
             title_text='FF3 Regression',
             height=self.height,
-        )
-
-        return fig
-
-
-    def plot_comparative_prices_ret(self, prices, returns):
-        colors = {}
-        for name in returns.columns:
-            colors[name] = np.where(returns[name] < 0, 'red', 'green')
-
-        fig = make_subplots(specs=[[{"secondary_y": True}]])
-
-        visible = [False] * len(prices.columns)
-        visible[0] = True
-
-        for i, name in enumerate(prices.columns):
-            fig.add_trace(
-                go.Scatter(
-                    x=prices[name].index,
-                    y=prices[name],
-                    name=name,
-                    visible=visible[i],
-                    yaxis='y'
-                ),
-                secondary_y=False
-            )
-
-        for i, name in enumerate(prices.columns):
-            fig.add_trace(
-                go.Bar(x=returns[name].index,
-                    y=(returns[name] * 100),
-                    marker_color=colors[name],
-                    name=name,
-                    visible=visible[i],
-                    yaxis="y1"),
-                secondary_y=True
-            )
-
-
-        buttons = []
-
-        for i, name in enumerate(prices.columns):
-            false_true = [False] * len(prices.columns)
-            false_true[i] = True
-            buttons.append(
-                dict(label=name,
-                    method='update',
-                    args=[{'visible': false_true}])
-            )
-
-        fig.update_layout(
-
-            updatemenus=[
-                dict(buttons=buttons,
-                    direction="down",
-                    pad={"r": 10, "t": 10},
-                    x=0.8,
-                    xanchor="left",
-                    y=1.2,
-                    yanchor="top",
-                    active=0,
-                    )],
-        )
-
-        fig.update_layout(
-            height=self.height,
-            title='Two years in S&P500',
-            yaxis_title='Adj Closing Prices',
-            yaxis2_title='Returns',
-            shapes=[dict(
-                x0='2020-02-15', x1='2020-02-15',
-                y0=0, y1=1,
-                xref='x', yref='paper',
-                line_width=2)],
-
-            annotations=[
-                dict(x='2020-02-17', y=0.95,
-                    xref='x', yref='paper',
-                    showarrow=False, xanchor='left',
-                    text='COVID Begins'),
-
-                dict(text="Choose Stocks:", showarrow=False,
-                    x=0.61, xanchor='left',
-                    y=1.17, yanchor="top",
-                    yref='paper', xref='paper',
-                    font=dict(size=18))
-            ],
-
-            yaxis=dict(
-                ticksuffix=' $'
-            ),
-        )
-
-        return fig
-
-
-    def plot_comparative_candles(self, complete_data):
-        fig = go.Figure()
-
-        stocks_name = complete_data.columns.levels[0]
-
-        visible = [False] * len(stocks_name)
-        visible[0] = True
-
-        for i, name in enumerate(stocks_name):
-            fig.add_trace(
-                go.Candlestick(x=complete_data[name].index,
-                            open=complete_data[name].Open,
-                            high=complete_data[name].High,
-                            low=complete_data[name].Low,
-                            close=complete_data[name].Close,
-                            name=name,
-                            visible=visible[i])
-            )
-
-        fig.update_layout(
-            height=self.height,
-            title='Empirical Analysis during the COVID',
-            xaxis=dict(automargin=False,
-            rangeslider=dict(visible=False)),
-            shapes=[dict(
-                x0='2020-02-15', x1='2020-02-15', y0=0, y1=1, xref='x', yref='paper',
-                line_width=2)],
-            annotations=[dict(
-                x='2020-02-17', y=0.95, xref='x', yref='paper',
-                showarrow=False, xanchor='left', text='COVID Begins'),
-                dict(text="Choose Stocks:", showarrow=False,
-                     x=0.61, xanchor='left',
-                     y=1.17, yanchor="top",
-                     yref='paper', xref='paper',
-                     font=dict(size=18))],
-            yaxis=dict(
-                ticksuffix=' $'
-            ),
-        )
-
-        buttons = []
-
-        for i, name in enumerate(stocks_name):
-            false_true = [False] * len(stocks_name)
-            false_true[i] = True
-            buttons.append(
-                dict(label=name,
-                    method='update',
-                    args=[{'visible': false_true}])
-            )
-
-        fig.update_layout(
-
-            updatemenus=[
-                dict(buttons=buttons,
-                    direction="down",
-                    pad={"r": 9, "t": 10},
-                    x=0.8,
-                    xanchor="left",
-                    y=1.2,
-                    yanchor="top",
-                    active=0,
-                    )],
         )
 
         return fig

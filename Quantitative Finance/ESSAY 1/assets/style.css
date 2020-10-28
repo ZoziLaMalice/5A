@@ -14,8 +14,12 @@ h5 {
     text-decoration: underline;
 }
 
+h6 {
+    margin-top: 0px;
+}
+
 .app__container {
-    margin: 1% 5%;
+    margin: 1% 1%;
 }
 
 .app__header {
@@ -68,6 +72,9 @@ h5 {
 
 .card__container {
     margin: 1%;
+    display: flex;
+    flex-flow: row;
+    justify-content: center;
 }
 
 .number_of_tweets {
@@ -82,3 +89,87 @@ h5 {
     display: flex;
     flex-flow: column;
     }
+
+.graph__container {
+    background-color: rgb(221, 236, 255);
+    border-radius: 0.55rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+    padding: 10px;
+}
+
+.prices_returns {
+    display: flex;
+    flex-direction: column;
+    background-color: rgb(221, 236, 255);
+    border-radius: 0.95rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+    padding: 10px;
+}
+
+.first {
+    margin-bottom: 15px;
+}
+
+.second {
+    margin-top: 0px;
+}
+
+.graph__title {
+    color: rgb(3, 18, 37) !important;
+    letter-spacing: 0.3rem !important;
+    padding: 15px 0px 0px 25px;
+    margin-bottom: 0px !important;
+    font-size: 1em;
+    margin: 0px;
+}
+
+.graph__dropdown {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    margin-bottom: 25px;
+}
+
+.dropdown__label {
+    color: rgb(3, 18, 37) !important;
+    letter-spacing: 0.3rem !important;
+    padding: 15px 0px 0px 25px;
+    margin-bottom: 0px !important;
+    font-size: 1em;
+}
+
+.dropdown {
+    width: 70%;
+}
+
+.graph__button {
+    display: flex;
+    flex-flow: row;
+    justify-content: center;
+    margin-top: 30px;
+}
+
+.matrix {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    background-color: rgb(221, 236, 255);
+    border-radius: 0.95rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+    padding: 10px;
+}
+
+button {
+    background-color: rgb(2, 34, 75);
+    color: rgb(221, 236, 255);
+}
+
+button:hover {
+    background-color: rgb(221, 236, 255);
+    color: rgb(2, 34, 75);
+}
+
+button:focus {
+    background-color: rgb(237, 203, 245);
+    color: rgb(2, 34, 75);
+}
