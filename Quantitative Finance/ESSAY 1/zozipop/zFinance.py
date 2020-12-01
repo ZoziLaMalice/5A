@@ -78,7 +78,7 @@ class StocksData:
                 'Annual Std': np.array(stocks_data.std()*np.sqrt(252)),
                 'Mean': np.array(stocks_data.mean()),
                 'Geometric Mean': np.array((1 + stocks_data).prod() ** (252/stocks_data.count())-1),
-                'Median': np.median(stocks_data),
+                'Median': np.array(stocks_data.median(axis=0)),
                 'Min': np.array(stocks_data.min()),
                 'Max': np.array(stocks_data.max()),
                 'Kurtosis': np.array(stocks_data.kurtosis()),

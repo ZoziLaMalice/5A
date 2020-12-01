@@ -8,10 +8,9 @@ import plotly.figure_factory as ff
 from plotly.subplots import make_subplots
 import plotly.io as pio
 import plotly.offline as pyo
-from . import zPlotly_theme
 
 pyo.init_notebook_mode()
-pio.templates.default = "zPlotly"
+pio.templates.default = "plotly_dark"
 
 class zoziPlot:
     def __init__(self, width, height):

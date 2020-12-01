@@ -7,9 +7,7 @@ import plotly.express as px
 import plotly.figure_factory as ff
 from plotly.subplots import make_subplots
 import plotly.io as pio
-import plotly.offline as pyo
 
-pyo.init_notebook_mode()
 pio.templates.default = "plotly"
 
 class zoziDash:
