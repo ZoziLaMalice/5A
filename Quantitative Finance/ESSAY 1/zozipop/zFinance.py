@@ -334,3 +334,32 @@ class StocksData:
         print(results.summary())
 
         return linregress(X, y)
+
+    def question1(self, pairs, logs=False):
+        if logs:
+            returns = self.logs
+        else:
+            returns = self.returns
+
+        flat_pairs = [', '.join(pair) for pair in pairs]
+
+        std = {}
+        ret = {}
+        for flat_pair, pair in zip(flat_pairs, pairs):
+            std[flat_pair] = [returns[pair[0]].std(), returns[pair[1]].std()]
+            ret[flat_pair] = [returns[pair[0]].mean(), returns[pair[1]].mean()]
+
+        iterables = [flat_pairs, ['Returns', 'Std']]
+        columns = pd.MultiIndex.from_product(iterables)
+        df = pd.DataFrame(
+            index=[np.arange(-1, 1.2, 0.2).round(2)], columns=columns)
+
+        for col in df.columns.levels[0]:
+            df[col, 'Returns'] = ret[col][0]*0.5+ret[col][1]*0.
+            for index, _ in df[col, 'Std'].iteritems():
+                df.loc[index, (col, 'Std')] = np.sqrt(
+                                (0.5**2)*(std[col][0]**2) + \
+                                (0.5**2) * (std[col][1]**2) + \
+                                2*0.5*0.5*std[col][0]*std[col][1]*index[0])
+
+        return df*100

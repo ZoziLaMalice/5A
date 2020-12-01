@@ -486,3 +486,66 @@ class zoziPlot:
         )
 
         return fig
+
+    def plot_corr_vs_std(self, df):
+        fig = go.Figure()
+
+        visible = [False] * len(df.columns.levels[0])
+        visible[0] = True
+
+        for i, name in enumerate(df.columns.levels[0]):
+            fig.add_trace(
+                go.Scatter(
+                    x=df[name, 'Std'],
+                    y=[v[0] for v in df.index.values],
+                    name=name,
+                    visible=visible[i]
+                )
+            )
+
+        buttons = []
+
+        for i, name in enumerate(df.columns.levels[0]):
+            false_true = [False] * len(df.columns.levels[0])
+            false_true[i] = True
+            buttons.append(
+                dict(label=name,
+                     method='update',
+                     args=[{'visible': false_true}])
+            )
+
+        fig.update_layout(
+
+            updatemenus=[
+                dict(buttons=buttons,
+                     direction="down",
+                     pad={"r": 10, "t": 10},
+                     x=0.8,
+                     xanchor="left",
+                     y=1.2,
+                     yanchor="top",
+                     active=0,
+                     )],
+        )
+
+        fig.update_layout(
+            width=self.width,
+            height=self.height,
+            title='Two years in S&P500',
+            yaxis_title='Correlation',
+            xaxis_title='Standard Deviation',
+
+            annotations=[
+                dict(text="Choose Pair:", showarrow=False,
+                     x=0.61, xanchor='left',
+                     y=1.17, yanchor="top",
+                     yref='paper', xref='paper',
+                     font=dict(size=18))
+            ],
+
+            xaxis=dict(
+                ticksuffix=' %'
+            ),
+        )
+
+        return fig
