@@ -10,7 +10,7 @@ import plotly.io as pio
 import plotly.offline as pyo
 
 pyo.init_notebook_mode()
-pio.templates.default = "plotly_dark"
+pio.templates.default = "plotly"
 
 class zoziDash:
     def __init__(self, height):
