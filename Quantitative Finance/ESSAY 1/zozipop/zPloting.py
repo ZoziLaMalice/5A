@@ -517,3 +517,34 @@ class zoziPlot:
         )
 
         return fig
+
+    def plot_time_window(self, df, start_date, end_date):
+        fig = go.Figure()
+
+        global_df_window = df[(df.index >= start_date) &
+                                (df.index <= end_date)]
+
+        global_df_window = global_df_window.apply(lambda x: x+1)
+        global_df_window.iloc[0, :] = 100
+        global_df_window = global_df_window.cumprod(axis=0)
+
+        for name in df.columns:
+            fig.add_trace(
+                go.Scatter(
+                    x=global_df_window.index,
+                    y=global_df_window[name],
+                    name=name,
+                )
+            )
+
+        fig.update_layout(
+            width=self.width,
+            height=self.height,
+            title='30-days window analysis of the portfolio',
+            yaxis_title='Indexed prices',
+            yaxis=dict(
+                ticksuffix=' $'
+            ),
+        )
+
+        return fig
