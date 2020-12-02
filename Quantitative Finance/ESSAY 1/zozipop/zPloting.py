@@ -266,37 +266,7 @@ class zoziPlot:
 
         return fig
 
-    def plot_CAPM(self, market_returns, portfolio_returns, regression):
-        fig = go.Figure()
-
-        fig.add_trace(
-            go.Scatter(
-                x=market_returns,
-                y=portfolio_returns,
-                name='Original Data',
-                mode='markers',
-            )
-        )
-
-        fig.add_trace(
-            go.Scatter(
-                x=market_returns,
-                y=regression.intercept + regression.slope*market_returns,
-                name='Fitted Line',
-                mode='lines',
-            )
-        )
-
-        fig.update_layout(
-            title_text='CAPM Regression',
-            width=self.width,
-            height=self.height,
-            )
-
-        return fig
-
-
-    def plot_FF3(self, df, ff3):
+    def plot_regression(self, df, factors, name):
         fig = go.Figure()
 
         fig.add_trace(
@@ -311,14 +281,14 @@ class zoziPlot:
         fig.add_trace(
             go.Scatter(
                 x=df['MKT'],
-                y=ff3.params.Intercept + ff3.params.MKT*df['MKT'],
+                y=factors.params.Intercept + factors.params.MKT*df['MKT'],
                 name='Fitted Line',
                 mode='lines',
             )
         )
 
         fig.update_layout(
-            title_text='FF3 Regression',
+            title_text=f'{name} Regression',
             width=self.width,
             height=self.height,
         )

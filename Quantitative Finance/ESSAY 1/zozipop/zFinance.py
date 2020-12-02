@@ -2,7 +2,8 @@ import pandas as pd
 import numpy as np
 from scipy.stats import linregress, norm
 from scipy.optimize import minimize
-import statsmodels.api as sm
+import statsmodels.formula.api as smf
+from statsmodels.iolib.summary2 import summary_col
 from itertools import combinations
 
 class StocksData:
@@ -48,7 +49,6 @@ class StocksData:
 
         return to_return
 
-
     # Compute Statistics
     def compute_statistics(self, stocks_data, market_data):
         if isinstance(stocks_data, pd.DataFrame):
@@ -88,7 +88,6 @@ class StocksData:
 
         return stats
 
-
     def get_statistics(self, market=True, percentage=True, logs=False):
         if logs and market:
             df = pd.concat([self.logs, self.market_logs.rename('Market')], axis=1)
@@ -108,7 +107,6 @@ class StocksData:
 
         return stats
 
-
     def get_equal_weighted_portfolio_returns(self, logs=False):
         if logs:
             weights = [1/len(self.returns.columns)]*len(self.returns.columns)
@@ -118,7 +116,6 @@ class StocksData:
             equal_weighted_portfolio_returns = (self.returns*weights).sum(axis=1).rename('Eq W Returns')
 
         return equal_weighted_portfolio_returns
-
 
     def get_statistics_eq_w_portfolio(self, logs=False, percentage=True):
         portfolio_returns = self.get_equal_weighted_portfolio_returns(logs=logs)
@@ -132,7 +129,6 @@ class StocksData:
             stats = stats.multiply([100]*7+[1]*4+[100]*3, axis=1)
 
         return stats
-
 
     def monte_carlo(self, selection, num_ports, logs=False, geometric=False, debug=False):
         if logs:
@@ -197,7 +193,6 @@ class StocksData:
         else:
             return allocation
 
-
     def get_ret_vol_sr(self, returns, weights, geometric=False):
         # Get Return, Std, SHarpe Ratio from optimization
         weights = np.array(weights)
@@ -210,7 +205,6 @@ class StocksData:
         sr = ret/vol
         return np.array([ret,vol,sr])
 
-
     def neg_sharpe(self, weights, returns, geometric=False):
         # the number 2 is the sharpe ratio index from the get_ret_vol_sr
         return self.get_ret_vol_sr(returns, weights, geometric=geometric)[2] * -1
@@ -219,7 +213,6 @@ class StocksData:
     def check_sum(self, weights):
         # Check if sum of weights equal to 1
         return np.sum(weights)-1
-
 
     def optimize_sharpe_ratio(self, selection, returns, geometric=False):
         # create constraint variable
@@ -236,7 +229,6 @@ class StocksData:
 
         return opt_results
 
-
     def maximize_sharpe_ratio(self, selection, logs=False, geometric=False):
         if logs:
             returns = self.logs[selection]
@@ -247,7 +239,6 @@ class StocksData:
 
         stats = self.get_ret_vol_sr(returns, results.x, geometric=geometric)
         return stats, results.x
-
 
     def find_optimal_portfolio(self, min_stocks, max_stocks, stocks_names):
         comb = {}
@@ -275,8 +266,6 @@ class StocksData:
 
         return results
 
-
-
     def compute_returns_portfolio(self, selection, weights, logs=False):
         if logs:
             returns = self.logs[selection]
@@ -286,7 +275,6 @@ class StocksData:
         portfolio_returns = (returns*weights).sum(axis=1).rename('Portfolio Returns')
 
         return portfolio_returns
-
 
     def get_statistics_portfolio(self, selection, weights, percentage=True, logs=False):
         portfolio_returns = self.compute_returns_portfolio(
@@ -303,31 +291,6 @@ class StocksData:
             stats = stats.multiply([100]*7+[1]*4+[100]*3, axis=1)
 
         return stats
-
-
-    def portfolio_vs_market_CAPM(self, selection, weights, logs=False):
-        # split dependent and independent variable
-        if logs:
-            X = self.market_logs
-        else:
-            X = self.market_returns
-
-        returns = self.compute_returns_portfolio(selection, weights, logs=logs)
-
-        y = returns.rename('Max Sharpe Portfolio')
-
-        # Add a constant to the independent value
-        X1 = sm.add_constant(X)
-
-        # make regression model
-        model = sm.OLS(y, X1)
-
-        # fit model and print results
-        results = model.fit()
-
-        print(results.summary())
-
-        return linregress(X, y)
 
     def question1(self, pairs, logs=False):
         if logs:
@@ -356,4 +319,77 @@ class StocksData:
                                 (0.5**2) * (std[col][1]**2) + \
                                 2*0.5*0.5*std[col][0]*std[col][1]*index[0])
 
-        return df*100
+        return df*100 # In percentage
+
+    def regression(self, portfolio_ret, ff3_factors, include_ff3):
+        # Cleaning DataFrame
+        ff3_factors.index = pd.to_datetime(ff3_factors.index, format='%Y%m%d')
+        ff3_factors.rename(columns={'Mkt-RF': 'MKT'}, inplace=True)
+        # Convert in percentile
+        ff3_factors = ff3_factors.apply(lambda x: x/100)
+        # Filter
+        ff3_factors = ff3_factors[ff3_factors.index > "2018-06-30"]
+
+        # Merging the stock and factor returns dataframes together
+        df_stock_factor = pd.merge(
+            portfolio_ret, ff3_factors, left_index=True, right_index=True)
+
+
+        df_stock_factor['XsRet'] = df_stock_factor['Returns'] - \
+            df_stock_factor['RF']  # Calculating excess returns
+
+        # Running CAPM and FF3 models.
+        CAPM = smf.ols(formula='XsRet ~ MKT', data=df_stock_factor).fit(
+            cov_type='HAC', cov_kwds={'maxlags': 1})
+
+        FF3 = smf.ols(formula='XsRet ~ MKT + SMB + HML',
+                    data=df_stock_factor).fit(cov_type='HAC',
+                    cov_kwds={'maxlags': 1})
+
+        # t-Stats
+        CAPMtstat = CAPM.tvalues
+        FF3tstat = FF3.tvalues
+
+        # Coeffs
+        CAPMcoeff = CAPM.params
+        FF3coeff = FF3.params
+
+        if include_ff3:
+            # DataFrame with coefficients and t-stats
+            results_df = pd.DataFrame({'CAPMcoeff': CAPMcoeff,
+                                    'CAPMtstat': CAPMtstat,
+                                    'FF3coeff': FF3coeff,
+                                    'FF3tstat': FF3tstat},
+                                    index=['Intercept', 'MKT', 'SMB', 'HML'])
+
+
+            dfoutput = summary_col([CAPM, FF3], stars=True, float_format='%0.4f',
+                        model_names=['CAPM', 'FF3'],
+                        info_dict={'N': lambda x: "{0:d}".format(int(x.nobs)),
+                        'Adjusted R2': lambda x: "{:.4f}".format(x.rsquared_adj)},
+                        regressor_order=['Intercept', 'MKT', 'SMB', 'HML'])
+            print(dfoutput)
+            return {
+                'DataFrame':{'Portfolio_Factors':df_stock_factor,
+                            'Results':results_df},
+                'Factors':{'Fama-French':FF3,
+                            'CAPM':CAPM}
+            }
+        else:
+            # DataFrame with coefficients and t-stats
+            results_df = pd.DataFrame({'CAPMcoeff': CAPMcoeff,
+                                    'CAPMtstat': CAPMtstat},
+                                      index=['Intercept', 'MKT'])
+
+            dfoutput = summary_col([CAPM], stars=True, float_format='%0.4f',
+                        model_names=['CAPM'],
+                        info_dict={'N': lambda x: "{0:d}".format(int(x.nobs)),
+                        'Adjusted R2': lambda x: "{:.4f}".format(x.rsquared_adj)},
+                        regressor_order=['Intercept', 'MKT'])
+            print(dfoutput)
+            return {
+                'DataFrame': {'Portfolio_Factors': df_stock_factor,
+                              'Results': results_df},
+                'Factors': {'CAPM': CAPM}
+            }
+
