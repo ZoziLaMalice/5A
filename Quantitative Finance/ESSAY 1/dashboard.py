@@ -10,7 +10,11 @@ import yfinance as yf
 import pandas as pd
 import json
 
+import plotly.io as pio
+pio.templates.default = "plotly"
+
 from zozipop import StocksData, zoziDash
+
 
 complete_data = pd.read_csv(
     'data/complete_data.csv', header=[0, 1], index_col=[0])

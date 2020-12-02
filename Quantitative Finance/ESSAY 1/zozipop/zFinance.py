@@ -5,12 +5,6 @@ from scipy.optimize import minimize
 import statsmodels.api as sm
 from itertools import combinations
 
-# Plotly Stuff
-import plotly.graph_objects as go
-import plotly.express as px
-from plotly.subplots import make_subplots
-
-
 class StocksData:
     def __init__(self, stocks, market):
         # Initialize data

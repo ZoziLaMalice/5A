@@ -6,9 +6,6 @@ import plotly.graph_objects as go
 import plotly.express as px
 import plotly.figure_factory as ff
 from plotly.subplots import make_subplots
-import plotly.io as pio
-
-pio.templates.default = "plotly"
 
 class zoziDash:
     def __init__(self, height):
