@@ -175,18 +175,20 @@ class PortfolioData:
 
         return stats
 
-    def regression(self, portfolio_ret, ff3_factors, include_ff3):
+    def regression(self, portfolio_ret, ff3_factors, umd_factor):
         # Cleaning DataFrame
         ff3_factors.index = pd.to_datetime(ff3_factors.index, format='%Y%m%d')
+        umd_factor.index = pd.to_datetime(umd_factor.index, format='%Y%m%d')
         ff3_factors.rename(columns={'Mkt-RF': 'MKT'}, inplace=True)
+        factors = pd.concat([ff3_factors, umd_factor], axis=1)
         # Convert in percentile
-        ff3_factors = ff3_factors.apply(lambda x: x/100)
+        factors = factors.apply(lambda x: x/100)
         # Filter
-        ff3_factors = ff3_factors[ff3_factors.index > "2014-01-01"]
+        factors = factors[factors.index > "2014-01-01"]
 
         # Merging the stock and factor returns dataframes together
         df_stock_factor = pd.merge(
-            portfolio_ret, ff3_factors, left_index=True, right_index=True)
+            portfolio_ret, factors, left_index=True, right_index=True)
 
 
         df_stock_factor['XsRet'] = df_stock_factor['Portfolio Returns'] - \
@@ -200,50 +202,41 @@ class PortfolioData:
                     data=df_stock_factor).fit(cov_type='HAC',
                     cov_kwds={'maxlags': 1})
 
+        UMD = smf.ols(formula='XsRet ~ MKT + SMB + HML + WML',
+                    data=df_stock_factor).fit(cov_type='HAC',
+                    cov_kwds={'maxlags': 1})
+
         # t-Stats
         CAPMtstat = CAPM.tvalues
         FF3tstat = FF3.tvalues
+        UMDtstat = UMD.tvalues
 
         # Coeffs
         CAPMcoeff = CAPM.params
         FF3coeff = FF3.params
+        UMDcoeff = UMD.params
 
-        if include_ff3:
-            # DataFrame with coefficients and t-stats
-            results_df = pd.DataFrame({'CAPMcoeff': CAPMcoeff,
+        # DataFrame with coefficients and t-stats
+        results_df = pd.DataFrame({'CAPMcoeff': CAPMcoeff,
                                     'CAPMtstat': CAPMtstat,
                                     'FF3coeff': FF3coeff,
-                                    'FF3tstat': FF3tstat},
-                                    index=['Intercept', 'MKT', 'SMB', 'HML'])
+                                    'FF3tstat': FF3tstat,
+                                    'UMDcoeff': UMDcoeff,
+                                    'UMDtstat': UMDtstat},
+                                index=['Intercept', 'MKT', 'SMB', 'HML', 'UMD'])
 
 
-            dfoutput = summary_col([CAPM, FF3], stars=True, float_format='%0.4f',
-                        model_names=['CAPM', 'FF3'],
-                        info_dict={'N': lambda x: "{0:d}".format(int(x.nobs)),
-                        'Adjusted R2': lambda x: "{:.4f}".format(x.rsquared_adj)},
-                        regressor_order=['Intercept', 'MKT', 'SMB', 'HML'])
-            print(dfoutput)
-            return {
-                'DataFrame':{'Portfolio_Factors':df_stock_factor,
-                            'Results':results_df},
-                'Factors':{'Fama-French':FF3,
-                            'CAPM':CAPM}
-            }
-        else:
-            # DataFrame with coefficients and t-stats
-            results_df = pd.DataFrame({'CAPMcoeff': CAPMcoeff,
-                                    'CAPMtstat': CAPMtstat},
-                                      index=['Intercept', 'MKT'])
-
-            dfoutput = summary_col([CAPM], stars=True, float_format='%0.4f',
-                        model_names=['CAPM'],
-                        info_dict={'N': lambda x: "{0:d}".format(int(x.nobs)),
-                        'Adjusted R2': lambda x: "{:.4f}".format(x.rsquared_adj)},
-                        regressor_order=['Intercept', 'MKT'])
-            print(dfoutput)
-            return {
-                'DataFrame': {'Portfolio_Factors': df_stock_factor,
-                              'Results': results_df},
-                'Factors': {'CAPM': CAPM}
-            }
+        dfoutput = summary_col([CAPM, FF3, UMD], stars=True, float_format='%0.4f',
+                    model_names=['CAPM', 'FF3', 'UMD'],
+                    info_dict={'N': lambda x: "{0:d}".format(int(x.nobs)),
+                    'Adjusted R2': lambda x: "{:.4f}".format(x.rsquared_adj)},
+                    regressor_order=['Intercept', 'MKT', 'SMB', 'HML', 'UMD'])
+        print(dfoutput)
+        return {
+            'DataFrame':{'Portfolio_Factors':df_stock_factor,
+                        'Results':results_df},
+            'Factors':{'Fama-French':FF3,
+                        'CAPM':CAPM,
+                        'UMD':UMD}
+        }
 
