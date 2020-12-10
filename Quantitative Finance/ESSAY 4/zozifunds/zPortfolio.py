@@ -102,69 +102,6 @@ class PortfolioData:
 
         return stats
 
-    def monte_carlo(self, selection, num_ports, logs=False, geometric=False, debug=False):
-        if logs:
-            returns = self.logs[selection]
-        else:
-            returns = self.returns[selection]
-
-        np.random.seed(11041997)
-        all_weights = np.zeros((num_ports, len(selection)))
-        ret_arr = np.zeros(num_ports)
-        vol_arr = np.zeros(num_ports)
-        sharpe_arr = np.zeros(num_ports)
-
-        for x in range(num_ports):
-            # Weights
-            weights = np.array(np.random.random(len(selection)))
-            weights = weights/np.sum(weights)
-
-            # Save weights
-            all_weights[x,:] = weights
-
-            # Expected return
-            if geometric:
-                mean = (1 + returns).prod() ** (252/returns.count())-1
-                ret_arr[x] = np.sum( (mean * weights))
-            else:
-                ret_arr[x] = np.sum( (returns.mean() * weights * 252))
-
-            # Expected volatility
-            vol_arr[x] = np.sqrt(np.dot(weights.T, np.dot(returns.cov()*252, weights)))
-
-            # Sharpe Ratio
-            sharpe_arr[x] = ret_arr[x]/vol_arr[x]
-
-        simulation = {
-            'weights': all_weights,
-            'returns': ret_arr,
-            'volatility': vol_arr,
-            'sharpe': sharpe_arr,
-            'num_ports': num_ports
-        }
-
-        max_sr_ret, max_sr_vol = ret_arr[sharpe_arr.argmax()], vol_arr[sharpe_arr.argmax()]
-        min_vol_ret, min_vol_vol = ret_arr[vol_arr.argmin()], vol_arr[vol_arr.argmin()]
-
-        weights_max_sharpe = list(all_weights[sharpe_arr.argmax()])
-        weights_min_vol = list(all_weights[vol_arr.argmin()])
-
-        max_sharpe_allocation = pd.DataFrame([i*100 for i in weights_max_sharpe],index=returns.columns,columns=['Max Sharpe Allocation'])
-        min_vol_allocation = pd.DataFrame([i*100 for i in weights_min_vol],index=returns.columns,columns=['Min Volatility Allocation'])
-
-        allocation = max_sharpe_allocation.T.append(min_vol_allocation.T)
-
-        allocation['Returns'] = [max_sr_ret*100, min_vol_ret*100]
-        allocation['Volatility'] = [max_sr_vol*100, min_vol_vol*100]
-        allocation['Sharpe Ratio'] = [sharpe_arr[sharpe_arr.argmax()], sharpe_arr[vol_arr.argmin()]]
-
-        allocation = allocation.round(2)
-
-        if debug:
-            return simulation, allocation
-        else:
-            return allocation
-
     def get_ret_vol_sr(self, returns, weights, geometric=False):
         # Get Return, Std, SHarpe Ratio from optimization
         weights = np.array(weights)
