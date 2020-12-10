@@ -76,7 +76,7 @@ class PortfolioData:
                 'Beta': beta,
                 'VaR 95% HS': var_hs,
                 'VaR 95% DN': norm.ppf(1-0.95, stocks_data.mean(), stocks_data.std()),
-                'Systemic Risk': sys_risk,
+                'Systematic Risk': sys_risk,
             },
             index=[columns]
         ).round(6)
