@@ -182,7 +182,7 @@ class PortfolioData:
         # Convert in percentile
         ff3_factors = ff3_factors.apply(lambda x: x/100)
         # Filter
-        ff3_factors = ff3_factors[ff3_factors.index > "2018-06-30"]
+        ff3_factors = ff3_factors[ff3_factors.index > "2014-01-01"]
 
         # Merging the stock and factor returns dataframes together
         df_stock_factor = pd.merge(
